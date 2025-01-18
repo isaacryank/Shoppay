@@ -1,0 +1,335 @@
+//Use this pseducode, my old codebase already good, the database already connect so just use the existing code, all you need to do is "just organise the codebase follow this flow", "make sure every sql are already connected to database." and i want in 1 codebase, never separate.
+
+
+Introduction to Shoppay System
+The Shoppay system is a platform designed to function similarly to Shopee. Here's an outline of how it works:
+
+1. Front Menu (User Interface)
+The system has three user roles:
+
+Customer (UserRole = 0)
+Seller (UserRole = 1)
+Admin (UserRole = 2)
+The front menu presents three options:
+
+Register/Sign Up Account
+Sign In Account
+Exit
+2. Register/Sign Up Account
+When a user chooses to register or sign up, the system will request the following details:
+
+Username
+Email
+Password
+Full Name
+Phone Number
+Registration Date (stored as a SQL timestamp)
+UserRole (customer = 0, seller = 1, admin = 2)
+isApproved (an attribute for user approval status)
+User Role Logic
+Admin Registration:
+
+If the user selects "Admin," the system will require them to input a passkey ("Shoppay System") to verify that they are authorized to register as an admin.
+Seller Registration:
+
+If the user selects "Seller," their account registration will require admin approval.
+In the database, the attribute isApproved will initially be set to 0.
+The admin must approve the seller account before the seller gains full access to the system and can start selling to customers. Once approved, the isApproved attribute will change to 1.
+Customer Registration:
+
+For customers, no verification is required. They can register and log in without additional steps.
+3. Sign In Account
+When a user selects the "Sign In" option, they need to provide their username and password. Based on their role, the system will redirect them to the appropriate homepage:
+
+Admin Login:
+Redirects to the admin homepage.
+Seller Login:
+If the seller is approved (i.e., isApproved = 1), the system redirects them to the seller homepage.
+If the seller is not approved (isApproved = 0), the system displays the message:
+"Login failed: Your account is not approved yet."
+Customer Login:
+Redirects to the customer homepage.
+4. Exit
+Selecting this option will shut down the terminal or close the system.
+Additional Notes for Evaluation
+The database design should include fields for UserRole and isApproved to manage roles and approval statuses effectively.
+
+Admin Main Menu
+When the admin logs into the system, they are presented with the following options:
+
+Manage Products
+Approve Registered Sellers
+Coupon Management
+Monitor All Wallet Transactions
+Update Commission Rate
+View Platform Sales Reports
+Logout
+Detailed Functionality of Each Option
+1. Manage Products System
+Description:
+Admin has complete control over products in the system. To make product management more efficient, implement a system with the following features:
+A page showing seller-specific stores based on UserID for users with UserRole = 1 (sellers). Admin can view each seller’s products separately without mixing them with others.
+An option to view all products in the system, similar to how customers browse products. Here, the admin can:
+CRUD operations: Create, Read, Update, and Delete products.
+Search products by name or keyword.
+Sort products by price or alphabetical order.
+Ensure there is a "Back" button to return to the Admin Main Menu.
+2. Approve Registered Sellers
+Description:
+Admin can approve or reject seller registration requests. Design a page interface with the following functionality:
+Display a list of pending seller applications with details like UserID, store name, and registration date.
+For each pending application, admin has the following options:
+Accept: Updates the isApproved attribute to 1, granting seller access to the platform.
+Reject: Leaves the isApproved attribute as 0, keeping the application in the pending state.
+Delete Application: Permanently removes the seller's application from the database.
+3. Coupon Management
+Description:
+Admin can create and manage discount coupons. These coupons can be used by customers to get discounts during payment. Design this section similarly to how sellers add products, with fields like:
+Coupon Code: A unique identifier for the coupon.
+Discount Amount/Percentage: Specifies the value of the discount.
+Validity Period: Start and end date for the coupon.
+Applicable Conditions: Minimum purchase value or specific product categories eligible for the coupon. Ensure that customers can redeem these coupons during checkout to reduce their payment amount.
+4. Monitor All Wallet Transactions
+Description:
+This section displays a record of all transactions on the platform, including:
+Details of transactions such as:
+Transaction ID
+Date and time
+Amount
+UserID of the customer and seller involved.
+Admin can view the platform's profit:
+Calculate profit based on the commission rate charged to sellers.
+Show a total profit summary across all transactions. This allows the admin to monitor financial activities and performance of the platform.
+5. Update Commission Rate
+Description:
+Admin can update the commission rate that is charged to sellers for each sale. This page should have:
+A field to input the new commission rate (percentage).
+A summary showing the projected profit based on the total sales and the updated commission rate. This feature lets the admin manage platform profitability effectively.
+6. View Platform Sales Reports
+Description:
+Admin can view detailed reports and analytics about platform activities, including:
+Graphs and Charts showing:
+Total sales (daily, monthly, or yearly).
+Profit earned by the platform.
+Number of sellers and customers registered on the platform over time.
+Provide filtering options to select specific date ranges or categories for the report.
+7. Logout
+Description:
+Returns the admin to the initial User Interface Menu, where they can choose:
+Register/Sign Up Account
+Sign In Account
+Exit
+Additional Recommendations
+1.Use pagination for large lists (e.g., products or transactions) to enhance performance and usability.
+
+
+Seller Interface Menu
+When a seller logs into the system, they will see the following options:
+
+Manage My Products
+Browse Products
+Approve Customer Orders
+View Wallet Balance
+View Sales Reports
+Transaction History
+Logout
+Detailed Functionality of Each Option
+1. Manage My Products
+Description:
+This option allows sellers to manage their own products. The menu has the following sub-options:
+Add Product: Sellers can add new products to their store with fields like:
+Product Name
+Description
+Price
+Quantity
+Category
+Images (if applicable)
+Update Product: Sellers can modify the details of their existing products.
+Delete Product: Sellers can remove products from their store.
+View My Products: Displays all the products of the logged-in seller. Each seller will see their Store Name at the top of this page. Sellers cannot view or edit products belonging to other sellers.
+Checkout Product (New):
+This interface shows where the seller’s products have gone after customers purchased them.
+It provides details like:
+Order ID
+Product Name
+Quantity Sold
+Date of Checkout
+Delivery Status
+Sellers can track how many items have been sold and adjust inventory as necessary.
+Return to Seller Menu: Goes back to the main Seller Interface menu.
+2. Browse Products
+Description:
+This page mimics the customer browsing experience, displaying all products in real-time, including those added by the seller. Features include:
+Searching and sorting products by name, category, price, or other filters.
+Viewing product details like images, descriptions, and prices.
+This option helps sellers see how their products are displayed to customers.
+3. Approve Customer Orders
+Description:
+This feature enables sellers to manage customer orders. Here’s how it works:
+A list of pending orders is displayed with details like:
+Order ID
+Customer Name
+Product Name
+Quantity
+Total Price
+Approval Options:
+Accept: If the seller approves the order:
+The product’s stock is updated to reflect the sale.
+The customer’s payment is deducted (after applying the platform’s commission rate), and the remaining amount is added to the seller’s wallet.
+Reject: If the seller rejects the order:
+The customer’s payment is refunded.
+A penalty fee is charged to the seller, deducted from their wallet.
+The rejected product’s stock is restored to the inventory.
+4. View Wallet Balance
+Description:
+This page shows the seller’s wallet balance, which includes:
+Available Funds: The amount the seller has earned from customer purchases.
+Withdrawal Options: Sellers can withdraw their funds, provided they maintain a minimum balance of $100.
+Transaction Summary: Displays recent transactions affecting the wallet balance, including incoming payments from sales and outgoing commissions deducted by the platform.
+5. View Sales Reports
+Description:
+This feature provides an overview of the seller’s sales performance, with data like:
+Total sales made by the seller.
+Top-selling products.
+Monthly or yearly sales trends.
+Profit summary (after deducting platform commissions).
+The design can follow the same reporting structure as the admin interface, but tailored to show data specific to the seller.
+6. Transaction History
+Description:
+This page provides a detailed view of all money flow related to the seller. The interface includes:
+A table view with columns like:
+Transaction ID
+Date
+Product Name
+Amount (In/Out)
+Receipt ID
+Commission Deducted
+Sellers can:
+View Receipts: By entering a ReceiptID, sellers can view detailed receipts of customer transactions.
+Track Deductions: See the exact amount deducted as commission/tax for each sale.
+7. Logout
+Description:
+Redirects the seller back to the User Interface menu, where they can choose:
+Register/Sign Up Account
+Sign In Account
+Exit
+Recommendations for Development:
+1. Add filtering options in reports and transaction history for easier data analysis.
+2. Maintain clear distinctions between seller-specific views (e.g., “Manage My Products”) and global views (e.g., “Browse Products”).
+
+Customer Interface Menu
+When a customer logs into the system, they are presented with the following options:
+
+Browse Products
+View Cart
+Apply Coupon
+Checkout
+View Wallet Balance
+View Transaction History
+View Receipt
+Logout
+Detailed Functionality of Each Option
+1. Browse Products
+Description:
+This page allows customers to view all products listed by sellers. It includes:
+A tidy table interface displaying:
+Product Name
+Seller Name/Store Name
+Price
+Stock Availability
+Category
+Customers can choose to:
+Select a Seller/Store (by SellerID): Redirects to a page showing all products from that specific store.
+Select a Product (by ProductID): Displays the product details (name, description, price, stock, etc.).
+Customers can specify the quantity of the product to add to their cart.
+2. View Cart
+Description:
+This page shows the list of products the customer has added to their cart. Each customer’s cart is private and includes the following options:
+Update Quantity:
+Allows customers to adjust the quantity of products in their cart.
+Implements logical stock management:
+If stock for a product is 77 and 2 are added to the cart, stock updates to 75.
+If the quantity in the cart is reduced, the system adds the returned stock back to the product inventory.
+Updates should reflect in both the cart and the product inventory seamlessly.
+Remove Item:
+Removes a product from the cart.
+Updates stock back into the product inventory accordingly.
+E.g., If a product had 33 stock, and 23 were in the cart, removing the item will return those 23 to the stock, making it 56.
+Apply Coupon:
+Lets the customer apply a coupon to calculate the discounted total.
+The system should handle complex coupon calculations (e.g., percentage discounts, flat discounts, or minimum purchase requirements).
+Checkout:
+Proceeds to the payment process, where:
+The system shows the total cost, including discounts.
+Displays the customer’s wallet balance.
+Asks the customer to confirm payment.
+If confirmed, the order status changes to “Pending Seller Approval.”
+Redirects to the My Order page to track the order.
+Back:
+Returns to the main Customer Interface menu.
+3. Checkout Item (Standalone)
+Description:
+Similar to Checkout in View Cart, but designed for scenarios where:
+The customer doesn’t have enough balance to complete the payment.
+In such cases, the order remains pending until the payment is made.
+Features:
+Displays pending orders with their OrderID.
+Allows the customer to:
+Complete Payment: Redirects to the payment page once funds are available in their wallet.
+Cancel Order: Removes the pending order from the system and restores product stock.
+4. View Wallet Balance
+Description:
+Customers can manage their wallet here. This includes:
+Top-Up Funds:
+Allows customers to add money to their wallet.
+Supports predefined top-up amounts.
+Transaction History:
+Displays a list of wallet transactions, including:
+Date
+Transaction Type (e.g., Top-Up, Purchase)
+Amount (In/Out)
+This wallet is exclusive to the Shoppay system and is mandatory for all payments.
+5. My Order
+Description:
+This page lets customers track their orders. Features include:
+Order Status:
+Displays whether an order has been accepted by the seller or is still pending.
+For rejected orders, the status should indicate the reason (e.g., "Seller Rejected").
+Receipt View:
+Shows the detailed payment receipt for each order.
+Includes breakdowns of product cost, discounts applied, and wallet deductions.
+6. View Transaction History
+Description:
+This page provides a comprehensive view of all transactions made by the customer, including:
+Purchases:
+Details of each purchase, including:
+Product Name
+Seller Name/Store
+Quantity
+Price
+Total Amount Paid
+Top-Ups:
+Displays wallet top-up history.
+Refunds:
+Details of any refunds received due to order cancellations or rejections.
+7. View Receipt
+Description:
+Allows customers to search for and view receipts of past transactions. Features include:
+Receipt Search:
+Customers can enter a specific ReceiptID to view its details.
+Receipt Details:
+Shows:
+Product Name(s)
+Quantity
+Price
+Seller Name
+Total Amount Paid
+Discount Applied (if any)
+8. Logout
+Description:
+Logs the customer out and redirects them to the User Interface menu, where they can:
+Register/Sign Up Account
+Sign In Account
+Exit
+Additional Recommendations
+User-Friendly Interface: Ensure customer-facing pages like Browse Products and View Cart have a clean, intuitive design with appropriate filters and sorting options.
