@@ -114,7 +114,9 @@ void manageChatsWithCustomers();
 
 void viewMessages(int userID1, int userID2);
 void sendMessage(int senderID, int receiverID, const std::string& messageText);
-
+void updateProfile(const string& userID);
+void viewProfile(const string& userID);
+void updateProfile(const string& userID);
 
 void addProduct();
 void updateProduct();
@@ -419,7 +421,8 @@ void sellerMenu() {
         cout << "[9] View Customer Demographics\n";
         cout << "[10] View Product Popularity\n";
         cout << "[11] View Messages\n";
-        cout << "[12] Logout\n";
+        cout << "[12] My Profile\n"; // New option
+        cout << "[13] Logout\n";
         cout << "Select an option: ";
         cin >> choice;
 
@@ -453,18 +456,29 @@ void sellerMenu() {
         }
         break;
         case 8:
-            generateSalesReport(glbStr); // Pass the current seller's ID as string
+            generateSalesReport(glbStr);
             break;
         case 9:
-            viewCustomerDemographics(glbStr); // Pass the current seller's ID as string
+            viewCustomerDemographics(glbStr);
             break;
         case 10:
-            viewProductPopularity(glbStr); // Pass the current seller's ID as string
+            viewProductPopularity(glbStr);
             break;
         case 11:
-            manageChatsWithCustomers(); // Function to manage chats with customers
+            manageChatsWithCustomers();
             break;
-        case 12:
+        case 12: // New option
+        {
+            viewProfile(glbStr);
+            cout << "Do you want to update your profile? (y/n): ";
+            char updateChoice;
+            cin >> updateChoice;
+            if (tolower(updateChoice) == 'y') {
+                updateProfile(glbStr);
+            }
+        }
+        break;
+        case 13:
             return;
         default:
             cout << "Invalid option. Please try again.\n";
@@ -482,14 +496,15 @@ void customerMenu() {
         clearScreen();
         displayBanner();
         cout << "[1] Browse Products\n";
-        cout << "[2] View Cart\n"; // Updated to include chat option in the cart
+        cout << "[2] View Cart\n";
         cout << "[3] Apply Coupon\n";
         cout << "[4] Checkout\n";
         cout << "[5] E-Wallet Management\n";
         cout << "[6] View Order Status\n";
         cout << "[7] View Transaction History\n";
         cout << "[8] View Receipt\n";
-        cout << "[9] Logout\n";
+        cout << "[9] My Profile\n"; // New option
+        cout << "[10] Logout\n";
         cout << "Select an option: ";
         cin >> choice;
 
@@ -498,7 +513,7 @@ void customerMenu() {
             browseProducts();
             break;
         case 2:
-            viewCartWithChatOption(); // Updated function for viewing cart
+            viewCartWithChatOption();
             break;
         case 3:
             applyCoupon();
@@ -510,7 +525,7 @@ void customerMenu() {
             eWalletManagement();
             break;
         case 6:
-            viewOrderStatus(glbStr); // Pass the current user's ID as string
+            viewOrderStatus(glbStr);
             break;
         case 7:
             viewTransactionHistory();
@@ -518,7 +533,18 @@ void customerMenu() {
         case 8:
             viewReceipt();
             break;
-        case 9:
+        case 9: // New option
+        {
+            viewProfile(glbStr);
+            cout << "Do you want to update your profile? (y/n): ";
+            char updateChoice;
+            cin >> updateChoice;
+            if (tolower(updateChoice) == 'y') {
+                updateProfile(glbStr);
+            }
+        }
+        break;
+        case 10:
             return;
         default:
             cout << "Invalid option. Please try again.\n";
@@ -1757,6 +1783,110 @@ void sendMessage(int senderID, int receiverID, const std::string& messageText) {
     else {
         std::cout << "Message sent successfully!\n";
     }
+}
+
+void viewProfile(const string& userID) {
+    string query = "SELECT Username, Email, FullName, PhoneNumber FROM user WHERE UserID = " + userID;
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (row) {
+            cout << "========== PROFILE DETAILS ==========\n";
+            cout << "Username: " << row[0] << endl;
+            cout << "Email: " << row[1] << endl;
+            cout << "Full Name: " << row[2] << endl;
+            cout << "Phone Number: " << row[3] << endl;
+        }
+        else {
+            cout << "No profile found for the provided UserID.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    // Display address details
+    query = "SELECT AddressLine1, AddressLine2, City, State, PostalCode, Country FROM address WHERE UserID = " + userID;
+    res = executeSelectQuery(query);
+    if (res) {
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (row) {
+            cout << "========== ADDRESS DETAILS ==========\n";
+            cout << "Address Line 1: " << row[0] << endl;
+            cout << "Address Line 2: " << row[1] << endl;
+            cout << "City: " << row[2] << endl;
+            cout << "State: " << row[3] << endl;
+            cout << "Postal Code: " << row[4] << endl;
+            cout << "Country: " << row[5] << endl;
+        }
+        else {
+            cout << "No address found for the provided UserID.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
+void updateProfile(const string& userID) {
+    string email, fullName, phoneNumber;
+
+    cout << "Enter new Email: ";
+    cin.ignore();
+    getline(cin, email);
+
+    cout << "Enter new Full Name: ";
+    getline(cin, fullName);
+
+    cout << "Enter new Phone Number: ";
+    getline(cin, phoneNumber);
+
+    string query = "UPDATE user SET Email = '" + email + "', FullName = '" + fullName + "', PhoneNumber = '" + phoneNumber + "' WHERE UserID = " + userID;
+    if (!executeUpdate(query)) {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+    else {
+        cout << "Profile updated successfully!\n";
+    }
+
+    string addressLine1, addressLine2, city, state, postalCode, country;
+
+    cout << "Enter new Address Line 1: ";
+    getline(cin, addressLine1);
+
+    cout << "Enter new Address Line 2 (or leave blank): ";
+    getline(cin, addressLine2);
+
+    cout << "Enter new City: ";
+    getline(cin, city);
+
+    cout << "Enter new State: ";
+    getline(cin, state);
+
+    cout << "Enter new Postal Code: ";
+    getline(cin, postalCode);
+
+    cout << "Enter new Country: ";
+    getline(cin, country);
+
+    query = "UPDATE address SET AddressLine1 = '" + addressLine1 + "', AddressLine2 = '" + addressLine2 + "', City = '" + city + "', State = '" + state + "', PostalCode = '" + postalCode + "', Country = '" + country + "' WHERE UserID = " + userID;
+    if (!executeUpdate(query)) {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+    else {
+        cout << "Address updated successfully!\n";
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
 }
 
 int main() {
