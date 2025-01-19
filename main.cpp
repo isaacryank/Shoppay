@@ -354,7 +354,6 @@ void registerUser() {
 void signInAccount() {
     string username, password;
 
-
     while (true) {
         clearScreen();
         displayBanner();
@@ -382,26 +381,31 @@ void signInAccount() {
                 string storedPassword = row[3];
 
                 if (bcrypt::validatePassword(password, storedPassword)) {
-                    glbStr = to_string(userID); // Store UserID in global variable
-                    clearScreen();
-                    displayBanner();
-                    cout << "================ SIGN IN SUCCESS ================\n";
-                    cout << "Welcome back, " << username << "!\n";
-                    cout << "=================================================\n";
-                    cin.ignore();
-                    cin.get();
-
-                    if (userRole == 2) {
-                        adminMenu();
-                    }
-                    else if (userRole == 1 && isApproved) {
-                        sellerMenu();
-                    }
-                    else if (userRole == 0) {
-                        customerMenu();
+                    if (userRole == 1 && !isApproved) {
+                        clearScreen();
+                        cout << "================ SIGN IN FAILED ================\n";
+                        cout << "Login failed: Your account is not approved yet.\n";
+                        cout << "=================================================\n";
                     }
                     else {
-                        cout << "Login failed: Your account is not approved yet.\n";
+                        glbStr = to_string(userID); // Store UserID in global variable
+                        clearScreen();
+                        displayBanner();
+                        cout << "================ SIGN IN SUCCESS ================\n";
+                        cout << "Welcome back, " << username << "!\n";
+                        cout << "=================================================\n";
+                        cin.ignore();
+                        cin.get();
+
+                        if (userRole == 2) {
+                            adminMenu();
+                        }
+                        else if (userRole == 1) {
+                            sellerMenu();
+                        }
+                        else if (userRole == 0) {
+                            customerMenu();
+                        }
                     }
                 }
                 else {
@@ -427,7 +431,7 @@ void signInAccount() {
         cin >> retryChoice;
 
         if (retryChoice == 2) {
-            return; // Go back to the main menu
+            mainMenu(); // Go back to the main menu
         }
     }
 }
@@ -472,7 +476,7 @@ void adminMenu() {
             generateHTMLReport(); // Call the new function
             break;
         case 8:
-            mainMenu();
+            return;
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -557,7 +561,7 @@ void sellerMenu() {
         }
         break;
         case 13:
-            mainMenu(); // Return to main menu
+            return; // Return to main menu
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -619,7 +623,7 @@ void customerMenu() {
             manageChatsWithSellers();
             break;
         case 11:
-            mainMenu(); // Return to main menu
+            return; // Return to main menu
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -667,7 +671,7 @@ void manageProducts() {
             sortProducts();
             break;
         case 7:
-            mainMenu(); // Return to main menu;
+            adminMenu(); // Return to main menu;
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -901,13 +905,13 @@ void approveSellers() {
 
     if (res) {
         MYSQL_ROW row;
-        cout << left << setw(10) << "UserID" << setw(20) << "Username" << setw(30) << "Email"
-            << setw(20) << "Full Name" << setw(15) << "Phone Number" << setw(20) << "Registration Date" << endl;
-        cout << string(120, '=') << endl;
+        cout << left << setw(8) << "UserID" << setw(18) << "Username" << setw(32) << "Email"
+            << setw(25) << "Full Name" << setw(15) << "Phone Number" << setw(20) << "Registration Date" << endl;
+        cout << string(118, '=') << endl;
 
         while ((row = mysql_fetch_row(res))) {
-            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(30) << row[2]
-                << setw(20) << row[3] << setw(15) << row[4] << setw(20) << row[5] << endl;
+            cout << left << setw(8) << row[0] << setw(18) << row[1] << setw(32) << row[2]
+                << setw(25) << row[3] << setw(15) << row[4] << setw(20) << row[5] << endl;
         }
         mysql_free_result(res);
     }
@@ -918,7 +922,7 @@ void approveSellers() {
 
     int userID;
     char decision;
-    cout << "Enter UserID to approve or decline (or '0' to go back): ";
+    cout << "\nEnter UserID to approve or decline (or '0' to go back): ";
     cin >> userID;
     if (userID == 0) return;
 
@@ -934,7 +938,9 @@ void approveSellers() {
     }
 
     if (executeUpdate(update_query)) {
+        cout << "\n====================\n";
         cout << (tolower(decision) == 'y' ? "Seller approved!" : "Seller declined and deleted!") << endl;
+        cout << "====================\n";
     }
     else {
         cerr << "Failed to update seller status." << endl;
@@ -944,7 +950,6 @@ void approveSellers() {
     cin.ignore();
     cin.get();
 }
-
 void manageCoupons() {
     int choice;
     while (true) {
