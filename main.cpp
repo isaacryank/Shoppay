@@ -8,6 +8,7 @@
 #include <algorithm> // For transform
 #include <fstream> // Include for file operations
 #include <cstdlib> // For system()
+#include <bcrypt.h>
 
 using namespace std;
 
@@ -111,19 +112,20 @@ void listSellersForChat(int customerID);
 void manageChatsWithSellers();
 void listCustomersForChat(int sellerID);
 void manageChatsWithCustomers();
+void cancelOrder(const string& orderID);
+void viewSalesTrends(const string& sellerID);
 
 void viewMessages(int userID1, int userID2);
 void sendMessage(int senderID, int receiverID, const std::string& messageText);
+void manageProfile();
 void updateProfile(const string& userID);
 void viewProfile(const string& userID);
-void updateProfile(const string& userID);
 
 void addProduct();
 void updateProduct();
 void deleteProduct(); 
 void searchProducts();
 void sortProducts();
-void searchProducts();
 void viewAllProducts();
 
 void createCoupon();
@@ -496,15 +498,16 @@ void customerMenu() {
         clearScreen();
         displayBanner();
         cout << "[1] Browse Products\n";
-        cout << "[2] View Cart\n";
+        cout << "[2] View Cart\n"; // Updated to include chat option in the cart
         cout << "[3] Apply Coupon\n";
         cout << "[4] Checkout\n";
         cout << "[5] E-Wallet Management\n";
         cout << "[6] View Order Status\n";
         cout << "[7] View Transaction History\n";
         cout << "[8] View Receipt\n";
-        cout << "[9] My Profile\n"; // New option
-        cout << "[10] Logout\n";
+        cout << "[9] My Profile\n"; // Updated option
+        cout << "[10] View Messages\n"; // New option
+        cout << "[11] Logout\n";
         cout << "Select an option: ";
         cin >> choice;
 
@@ -513,7 +516,7 @@ void customerMenu() {
             browseProducts();
             break;
         case 2:
-            viewCartWithChatOption();
+            viewCartWithChatOption(); // Updated function for viewing cart
             break;
         case 3:
             applyCoupon();
@@ -525,7 +528,7 @@ void customerMenu() {
             eWalletManagement();
             break;
         case 6:
-            viewOrderStatus(glbStr);
+            viewOrderStatus(glbStr); // Pass the current user's ID as string
             break;
         case 7:
             viewTransactionHistory();
@@ -533,18 +536,13 @@ void customerMenu() {
         case 8:
             viewReceipt();
             break;
-        case 9: // New option
-        {
-            viewProfile(glbStr);
-            cout << "Do you want to update your profile? (y/n): ";
-            char updateChoice;
-            cin >> updateChoice;
-            if (tolower(updateChoice) == 'y') {
-                updateProfile(glbStr);
-            }
-        }
-        break;
-        case 10:
+        case 9: // Enhanced option for profile management
+            manageProfile();
+            break;
+        case 10: // New option for viewing messages
+            manageChatsWithSellers();
+            break;
+        case 11:
             return;
         default:
             cout << "Invalid option. Please try again.\n";
@@ -717,31 +715,65 @@ void viewAllProducts() {
 }
 
 void searchProducts() {
-    string keyword;
+    string keyword, category, minPrice, maxPrice, minRating;
 
-    cout << "========== SEARCH PRODUCTS ==========\n";
     cout << "Enter keyword: ";
     cin.ignore();
     getline(cin, keyword);
 
-    string query = "SELECT * FROM product WHERE ProductName LIKE '%" + keyword + "%'";
+    cout << "Enter category (or leave blank): ";
+    getline(cin, category);
+
+    cout << "Enter minimum price (or leave blank): ";
+    getline(cin, minPrice);
+
+    cout << "Enter maximum price (or leave blank): ";
+    getline(cin, maxPrice);
+
+    cout << "Enter minimum rating (or leave blank): ";
+    getline(cin, minRating);
+
+    string query = "SELECT p.ProductID, p.ProductName, p.Description, p.Price, p.StockQuantity, AVG(r.Rating) as AvgRating "
+        "FROM product p LEFT JOIN reviews r ON p.ProductID = r.ProductID "
+        "WHERE p.ProductName LIKE '%" + keyword + "%' ";
+
+    if (!category.empty()) {
+        query += "AND p.CategoryID = (SELECT CategoryID FROM category WHERE CategoryName = '" + category + "') ";
+    }
+    if (!minPrice.empty()) {
+        query += "AND p.Price >= " + minPrice + " ";
+    }
+    if (!maxPrice.empty()) {
+        query += "AND p.Price <= " + maxPrice + " ";
+    }
+    if (!minRating.empty()) {
+        query += "GROUP BY p.ProductID HAVING AvgRating >= " + minRating;
+    }
+    else {
+        query += "GROUP BY p.ProductID";
+    }
+
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
         MYSQL_ROW row;
         cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
-            << setw(10) << "Price" << setw(10) << "Stock" << endl;
-        cout << string(100, '=') << endl;
+            << setw(10) << "Price" << setw(10) << "Stock" << setw(10) << "AvgRating" << endl;
+        cout << string(110, '=') << endl;
 
         while ((row = mysql_fetch_row(res))) {
             cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
-                << setw(10) << row[3] << setw(10) << row[4] << endl;
+                << setw(10) << row[3] << setw(10) << row[4] << setw(10) << row[5] << endl;
         }
         mysql_free_result(res);
     }
     else {
         cout << "Error: " << mysql_error(conn) << endl;
     }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
 }
 
 void sortProducts() {
@@ -1785,6 +1817,24 @@ void sendMessage(int senderID, int receiverID, const std::string& messageText) {
     }
 }
 
+void manageProfile() {
+    clearScreen();
+    displayBanner();
+    viewProfile(glbStr); // Display current profile details
+
+    cout << "\nDo you want to update your profile? (y/n): ";
+    char updateChoice;
+    cin >> updateChoice;
+
+    if (tolower(updateChoice) == 'y') {
+        updateProfile(glbStr);
+    }
+
+    cout << "\nPress Enter to return to the menu...";
+    cin.ignore();
+    cin.get();
+}
+
 void viewProfile(const string& userID) {
     string query = "SELECT Username, Email, FullName, PhoneNumber FROM user WHERE UserID = " + userID;
     MYSQL_RES* res = executeSelectQuery(query);
@@ -1807,7 +1857,6 @@ void viewProfile(const string& userID) {
         cout << "Error: " << mysql_error(conn) << endl;
     }
 
-    // Display address details
     query = "SELECT AddressLine1, AddressLine2, City, State, PostalCode, Country FROM address WHERE UserID = " + userID;
     res = executeSelectQuery(query);
     if (res) {
@@ -1829,13 +1878,13 @@ void viewProfile(const string& userID) {
     else {
         cout << "Error: " << mysql_error(conn) << endl;
     }
-
-    cout << "Press Enter to continue...";
-    cin.ignore();
-    cin.get();
 }
 
 void updateProfile(const string& userID) {
+    clearScreen();
+    displayBanner();
+    cout << "========== UPDATE PROFILE ==========\n";
+
     string email, fullName, phoneNumber;
 
     cout << "Enter new Email: ";
@@ -1882,6 +1931,39 @@ void updateProfile(const string& userID) {
     }
     else {
         cout << "Address updated successfully!\n";
+    }
+}
+
+void cancelOrder(const string& orderID) {
+    string query = "UPDATE orders SET OrderStatus = 'Cancelled' WHERE OrderID = " + orderID + " AND OrderStatus = 'Pending Seller Approval'";
+    if (!executeUpdate(query)) {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+    else {
+        cout << "Order cancelled successfully!\n";
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewSalesTrends(const string& sellerID) {
+    string query = "SELECT DATE(OrderDate) AS Date, SUM(TotalAmount) AS DailySales FROM orders WHERE UserID = " + sellerID + " GROUP BY DATE(OrderDate) ORDER BY Date";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << "========== SALES TRENDS ==========\n";
+        cout << left << setw(15) << "Date" << setw(15) << "Daily Sales" << endl;
+        cout << string(30, '-') << endl;
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(15) << row[0] << setw(15) << row[1] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
     }
 
     cout << "Press Enter to continue...";
