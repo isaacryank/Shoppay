@@ -248,136 +248,190 @@ void registerUser() {
     int roleChoice;
     bool proceedWithRegistration = true; // Flag to check if registration should proceed
 
-    cout << "Enter Username: ";
-    cin.ignore(); // To ignore any leftover newline character from previous input
-    getline(cin, newUser.username);
+    while (true) {
+        clearScreen();
+        displayBanner();
+        cout << "==================== REGISTER ====================\n";
+        cout << "[1] Continue Registration\n";
+        cout << "[2] Back to Main Menu\n";
+        cout << "==================================================\n";
+        cout << "Select an option: ";
+        cin >> roleChoice;
 
-    cout << "Enter Email: ";
-    getline(cin, newUser.email);
+        if (roleChoice == 2) {
+            return; // Go back to the main menu
+        }
+        else if (roleChoice != 1) {
+            cout << "Invalid option. Please try again.\n";
+            continue;
+        }
 
-    cout << "Enter Password: ";
-    getline(cin, newUser.password);
-    newUser.password = bcrypt::generateHash(newUser.password); // Hash the password
+        clearScreen();
+        cout << "=================== REGISTRATION ==================\n";
+        cout << left << setw(20) << "Field" << setw(2) << ": " << "Input" << endl;
+        cout << "---------------------------------------------------\n";
+        cout << left << setw(20) << "Enter Username" << setw(2) << ": ";
+        cin.ignore(); // To ignore any leftover newline character from previous input
+        getline(cin, newUser.username);
 
-    cout << "Enter Full Name: ";
-    getline(cin, newUser.fullName);
+        cout << left << setw(20) << "Enter Email" << setw(2) << ": ";
+        getline(cin, newUser.email);
 
-    cout << "Enter Phone Number: ";
-    getline(cin, newUser.phoneNumber);
+        cout << left << setw(20) << "Enter Password" << setw(2) << ": ";
+        getline(cin, newUser.password);
+        newUser.password = bcrypt::generateHash(newUser.password); // Hash the password
 
-    newUser.isApproved = false; // Default to not approved
+        cout << left << setw(20) << "Enter Full Name" << setw(2) << ": ";
+        getline(cin, newUser.fullName);
 
-    cout << "Select User Role:\n[1] Admin\n[2] Seller\n[3] Customer\n";
-    cin >> roleChoice;
+        cout << left << setw(20) << "Enter Phone Number" << setw(2) << ": ";
+        getline(cin, newUser.phoneNumber);
+        newUser.isApproved = false; // Default to not approved
 
-    if (roleChoice == 1) {
-        bool correctPassKey = false;
-        while (!correctPassKey) {
-            cin.ignore(); // To ignore any leftover newline character from previous input
-            cout << "Enter the Admin Pass Key: ";
-            getline(cin, passKey);
-            if (passKey == "Shoppay System") {
-                newUser.UserRole = 2; // Set as admin
-                correctPassKey = true;
-            }
-            else {
-                cout << "Incorrect pass key.\n";
-                int retryChoice;
-                cout << "[1] Try Again\n[2] Cancel/Back\n";
-                cin >> retryChoice;
-                if (retryChoice == 2) {
-                    cout << "Your Registration as Admin Failed. Please Try Again later.\n";
-                    proceedWithRegistration = false; // Set flag to false to prevent saving data
-                    break;
+        cout << left << setw(20) << "Select User Role" << setw(2) << ": \n[1] Admin\n[2] Seller\n[3] Customer\n";
+        cin >> roleChoice;
+
+        if (roleChoice == 1) {
+            bool correctPassKey = false;
+            while (!correctPassKey) {
+                cin.ignore(); // To ignore any leftover newline character from previous input
+                cout << "Enter the Admin Pass Key: ";
+                getline(cin, passKey);
+                if (passKey == "Shoppay System") {
+                    newUser.UserRole = 2; // Set as admin
+                    correctPassKey = true;
+                }
+                else {
+                    cout << "Incorrect pass key.\n";
+                    int retryChoice;
+                    cout << "[1] Try Again\n[2] Cancel/Back\n";
+                    cin >> retryChoice;
+                    if (retryChoice == 2) {
+                        cout << "Your Registration as Admin Failed. Please Try Again later.\n";
+                        proceedWithRegistration = false; // Set flag to false to prevent saving data
+                        break;
+                    }
                 }
             }
         }
-    }
-    else if (roleChoice == 2) {
-        newUser.UserRole = 1; // Set as seller
+        else if (roleChoice == 2) {
+            newUser.UserRole = 1; // Set as seller
 
-        cout << "Enter Store Name: ";
-        cin.ignore();
-        getline(cin, newUser.storeName);
-    }
-    else {
-        newUser.UserRole = 0; // Default to customer
-    }
-
-    if (proceedWithRegistration) {
-        // Debugging statements
-        cout << "Debug Info: Username = " << newUser.username << endl;
-        cout << "Debug Info: Email = " << newUser.email << endl;
-        cout << "Debug Info: Password = " << newUser.password << endl;
-        cout << "Debug Info: Full Name = " << newUser.fullName << endl;
-        cout << "Debug Info: Phone Number = " << newUser.phoneNumber << endl;
-        cout << "Debug Info: User Role = " << newUser.UserRole << endl;
-
-        // Insert user into the database
-        string query = "INSERT INTO user (Username, Email, Password, FullName, PhoneNumber, UserRole, isApproved, StoreName) VALUES ('" +
-            newUser.username + "', '" + newUser.email + "', '" + newUser.password + "', '" +
-            newUser.fullName + "', '" + newUser.phoneNumber + "', " +
-            to_string(newUser.UserRole) + ", " + to_string(newUser.isApproved) + ", '" + newUser.storeName + "')";
-        if (!executeUpdate(query)) {
-            cout << "Error: " << mysql_error(conn) << endl;
+            cout << "Enter Store Name: ";
+            cin.ignore();
+            getline(cin, newUser.storeName);
         }
         else {
-            cout << "Registration successful!\n";
+            newUser.UserRole = 0; // Default to customer
         }
-    }
-    else {
-        cout << "Registration was not completed.\n";
+
+        if (proceedWithRegistration) {
+            // Insert user into the database
+            string query = "INSERT INTO user (Username, Email, Password, FullName, PhoneNumber, UserRole, isApproved, StoreName) VALUES ('" +
+                newUser.username + "', '" + newUser.email + "', '" + newUser.password + "', '" +
+                newUser.fullName + "', '" + newUser.phoneNumber + "', " +
+                to_string(newUser.UserRole) + ", " + to_string(newUser.isApproved) + ", '" + newUser.storeName + "')";
+            if (!executeUpdate(query)) {
+                cout << "Error: " << mysql_error(conn) << endl;
+            }
+            else {
+                clearScreen();
+                displayBanner();
+                cout << "================ REGISTRATION SUCCESS ================\n";
+                cout << "Registration successful!\n";
+                cout << "=====================================================\n";
+            }
+        }
+        else {
+            cout << "Registration was not completed.\n";
+        }
+
+        break;
     }
 }
 
 // Sign In Account
 void signInAccount() {
     string username, password;
-    cout << "Enter Username: ";
-    cin >> username;
-    cout << "Enter Password: ";
-    cin >> password;
 
-    string query = "SELECT UserID, UserRole, isApproved, Password FROM user WHERE Username = '" + username + "'";
-    MYSQL_RES* res = executeSelectQuery(query);
-    if (res) {
-        MYSQL_ROW row = mysql_fetch_row(res);
-        if (row) {
-            int userID = atoi(row[0]);
-            int userRole = atoi(row[1]);
-            int isApproved = atoi(row[2]);
-            string storedPassword = row[3];
 
-            if (bcrypt::validatePassword(password, storedPassword)) {
-                glbStr = to_string(userID); // Store UserID in global variable
-                if (userRole == 2) {
-                    adminMenu();
-                }
-                else if (userRole == 1 && isApproved) {
-                    sellerMenu();
-                }
-                else if (userRole == 0) {
-                    customerMenu();
+    while (true) {
+        clearScreen();
+        displayBanner();
+        cout << "==================== SIGN IN ====================\n";
+        cout << left << setw(20) << "Field" << setw(2) << ": " << "Input" << endl;
+        cout << "-------------------------------------------------\n";
+
+        cout << left << setw(20) << "Enter Username" << setw(2) << ": ";
+        cin.ignore(); // To ignore any leftover newline character from previous input
+        getline(cin, username);
+
+        cout << left << setw(20) << "Enter Password" << setw(2) << ": ";
+        getline(cin, password);
+
+        // Query to get user details
+        string query = "SELECT UserID, UserRole, isApproved, Password FROM user WHERE Username = '" + username + "'";
+        MYSQL_RES* res = executeSelectQuery(query);
+
+        if (res) {
+            MYSQL_ROW row = mysql_fetch_row(res);
+            if (row) {
+                int userID = atoi(row[0]);
+                int userRole = atoi(row[1]);
+                int isApproved = atoi(row[2]);
+                string storedPassword = row[3];
+
+                if (bcrypt::validatePassword(password, storedPassword)) {
+                    glbStr = to_string(userID); // Store UserID in global variable
+                    clearScreen();
+                    displayBanner();
+                    cout << "================ SIGN IN SUCCESS ================\n";
+                    cout << "Welcome back, " << username << "!\n";
+                    cout << "=================================================\n";
+                    cin.ignore();
+                    cin.get();
+
+                    if (userRole == 2) {
+                        adminMenu();
+                    }
+                    else if (userRole == 1 && isApproved) {
+                        sellerMenu();
+                    }
+                    else if (userRole == 0) {
+                        customerMenu();
+                    }
+                    else {
+                        cout << "Login failed: Your account is not approved yet.\n";
+                    }
                 }
                 else {
-                    cout << "Login failed: Your account is not approved yet.\n";
+                    cout << "Invalid username or password.\n";
                 }
             }
             else {
                 cout << "Invalid username or password.\n";
             }
+            mysql_free_result(res);
         }
         else {
-            cout << "Invalid username or password.\n";
+            cout << "Error: " << mysql_error(conn) << endl;
         }
-        mysql_free_result(res);
-    }
-    else {
-        cout << "Error: " << mysql_error(conn) << endl;
+
+        // Option to retry or go back to the main menu
+        int retryChoice;
+        cout << "==================== OPTIONS ====================\n";
+        cout << "[1] Try Again\n";
+        cout << "[2] Back to Main Menu\n";
+        cout << "=================================================\n";
+        cout << "Select an option: ";
+        cin >> retryChoice;
+
+        if (retryChoice == 2) {
+            return; // Go back to the main menu
+        }
     }
 }
 
-// Admin Menu
 // Admin Menu
 void adminMenu() {
     int choice;
@@ -392,7 +446,7 @@ void adminMenu() {
         cout << "[6] View Platform Sales Reports\n";
         cout << "[7] Generate Graph Reports\n"; // New Option
         cout << "[8] Logout\n";
-        cout << "Select an option: ";
+        cout << "\nSelect an option: ";
         cin >> choice;
 
         switch (choice) {
@@ -418,7 +472,7 @@ void adminMenu() {
             generateHTMLReport(); // Call the new function
             break;
         case 8:
-            return;
+            mainMenu();
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -447,7 +501,7 @@ void sellerMenu() {
         cout << "[11] View Messages\n";
         cout << "[12] My Profile\n"; // New option
         cout << "[13] Logout\n";
-        cout << "Select an option: ";
+        cout << "\nSelect an option: ";
         cin >> choice;
 
         switch (choice) {
@@ -503,7 +557,7 @@ void sellerMenu() {
         }
         break;
         case 13:
-            return;
+            mainMenu(); // Return to main menu
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -530,7 +584,7 @@ void customerMenu() {
         cout << "[9] My Profile\n"; // Updated option
         cout << "[10] View Messages\n"; // New option
         cout << "[11] Logout\n";
-        cout << "Select an option: ";
+        cout << "\nSelect an option: ";
         cin >> choice;
 
         switch (choice) {
@@ -565,7 +619,7 @@ void customerMenu() {
             manageChatsWithSellers();
             break;
         case 11:
-            return;
+            mainMenu(); // Return to main menu
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -613,7 +667,7 @@ void manageProducts() {
             sortProducts();
             break;
         case 7:
-            return;
+            mainMenu(); // Return to main menu;
         default:
             cout << "Invalid option. Please try again.\n";
             break;
