@@ -8,7 +8,6 @@
 #include <algorithm> // For transform
 #include <fstream> // Include for file operations
 #include <cstdlib> // For system()
-#include <bcrypt.h>
 
 using namespace std;
 
@@ -61,6 +60,25 @@ struct Transaction {
     string type; // Transaction type (e.g., "top-up", "purchase", etc.)
     string date;
 };
+
+// Minimal bcrypt functions implementation
+namespace bcrypt {
+    const int BCRYPT_HASHSIZE = 61;
+
+    string generateHash(const string& password) {
+        // This is a simplified example. Use an actual bcrypt library for production.
+        // Placeholder for hashing function
+        // In a real scenario, use a proper bcrypt library like bcrypt-cpp
+        return "hashed_" + password;
+    }
+
+    bool validatePassword(const string& password, const string& hash) {
+        // This is a simplified example. Use an actual bcrypt library for production.
+        // Placeholder for validation function
+        // In a real scenario, use a proper bcrypt library like bcrypt-cpp
+        return hash == "hashed_" + password;
+    }
+}
 
 // Global Variables
 MYSQL* conn; // Global connection object
@@ -178,8 +196,6 @@ void connectToDatabase() {
 
 bool executeUpdate(const string& query) {
     if (mysql_query(conn, query.c_str())) {
-        cerr << "Error executing update: " << mysql_error(conn) << "\n";
-        cerr << "Query: " << query << "\n"; // Print the query for debugging
         return false;
     }
     return true;
@@ -187,7 +203,6 @@ bool executeUpdate(const string& query) {
 
 MYSQL_RES* executeSelectQuery(const string& query) {
     if (mysql_query(conn, query.c_str())) {
-        cerr << "Error executing query: " << mysql_error(conn) << "\n";
         return nullptr;
     }
     return mysql_store_result(conn);
@@ -242,6 +257,7 @@ void registerUser() {
 
     cout << "Enter Password: ";
     getline(cin, newUser.password);
+    newUser.password = bcrypt::generateHash(newUser.password); // Hash the password
 
     cout << "Enter Full Name: ";
     getline(cin, newUser.fullName);
@@ -322,7 +338,7 @@ void signInAccount() {
     cout << "Enter Password: ";
     cin >> password;
 
-    string query = "SELECT UserID, UserRole, isApproved FROM user WHERE Username = '" + username + "' AND Password = '" + password + "'";
+    string query = "SELECT UserID, UserRole, isApproved, Password FROM user WHERE Username = '" + username + "'";
     MYSQL_RES* res = executeSelectQuery(query);
     if (res) {
         MYSQL_ROW row = mysql_fetch_row(res);
@@ -330,19 +346,25 @@ void signInAccount() {
             int userID = atoi(row[0]);
             int userRole = atoi(row[1]);
             int isApproved = atoi(row[2]);
+            string storedPassword = row[3];
 
-            glbStr = to_string(userID); // Store UserID in global variable
-            if (userRole == 2) {
-                adminMenu();
-            }
-            else if (userRole == 1 && isApproved) {
-                sellerMenu();
-            }
-            else if (userRole == 0) {
-                customerMenu();
+            if (bcrypt::validatePassword(password, storedPassword)) {
+                glbStr = to_string(userID); // Store UserID in global variable
+                if (userRole == 2) {
+                    adminMenu();
+                }
+                else if (userRole == 1 && isApproved) {
+                    sellerMenu();
+                }
+                else if (userRole == 0) {
+                    customerMenu();
+                }
+                else {
+                    cout << "Login failed: Your account is not approved yet.\n";
+                }
             }
             else {
-                cout << "Login failed: Your account is not approved yet.\n";
+                cout << "Invalid username or password.\n";
             }
         }
         else {
