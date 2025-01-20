@@ -101,7 +101,8 @@ void signInAccount();
 void adminMenu();
 void sellerMenu();
 void customerMenu();
-void manageProducts();
+void sellermanageProducts();
+//void adminmanageProducts();
 void approveSellers();
 void manageCoupons();
 void monitorWalletTransactions();
@@ -202,10 +203,11 @@ void clearScreen() {
 }
 
 void displayBanner() {
-    cout << "=====================================================\n";
-    cout << "              WELCOME TO SHOPPAY SYSTEM              \n";
-    cout << "       A PLACE WITH PEACE OF MIND TO SHOPPING        \n";
-    cout << "=====================================================\n\n";
+    cout << "=============================================================\n";
+    cout << "                  WELCOME TO SHOPPAY SYSTEM                  \n";
+    cout << "            A PLACE WITH PEACE OF MIND TO SHOPPING           \n";
+    cout << "=============================================================\n";
+
 }
 
 // Function to format a double value to two decimal places
@@ -498,7 +500,7 @@ void adminMenu() {
 
         switch (choice) {
         case 1:
-            manageProducts();
+            //adminmanageProducts();
             break;
         case 2:
             approveSellers();
@@ -558,7 +560,7 @@ void sellerMenu() {
             sellerMessagePageInterface();
             break;
         case 3:
-            manageProducts();
+            sellermanageProducts();
             break;
         case 4:
             approveCustomerOrdersInterface();
@@ -645,22 +647,24 @@ void customerMenu() {
 }
 
 // Implement remaining functions for managing products, approving sellers, managing coupons, etc.
-void manageProducts() {
+void sellermanageProducts() {
     int choice;
     while (true) {
         clearScreen();
         displayBanner();
-        cout << "================= MANAGE PRODUCTS =================\n";
-        cout << "[1] Add Product\n";
-        cout << "[2] Update Product\n";
-        cout << "[3] Delete Product\n";
-        cout << "[4] View All Products\n";
-        cout << "[5] Search Products\n";
-        cout << "[6] Sort Products\n";
-        cout << "[7] Browse Products (Monitor Other Sellers)\n";
-        cout << "[8] Back to Admin Menu\n";
-        cout << "===================================================\n";
-        cout << "Select an option: ";
+        cout << "=============================================================\n";
+        cout << "|                        MANAGE PRODUCTS                    |\n";
+        cout << "=============================================================\n";
+        cout << " [1] Add Product\n";
+        cout << " [2] Update Product\n";
+        cout << " [3] Delete Product\n";
+        cout << " [4] View All Products\n";
+        cout << " [5] Search Products\n";
+        cout << " [6] Sort Products\n";
+        cout << " [7] Browse Products (Monitor Other Sellers)\n";
+        cout << " [8] Back to Seller Menu\n";
+        cout << "=============================================================\n";
+        cout << " Select an option: ";
         cin >> choice;
 
         switch (choice) {
@@ -685,7 +689,7 @@ void manageProducts() {
         case 7:
             browseProductsInterface(); 
         case 8:
-            adminMenu(); // Return to main menu;
+            sellerMenu(); // Return to main menu;
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -697,98 +701,17 @@ void manageProducts() {
 
 void addProduct() {
     Product newProduct;
-    string name, description, storeName;
+    string name, description;
     double price;
     int stock;
 
-    cout << "========== ADD PRODUCT ==========\n";
-    cout << "Enter Product Name: ";
-    cin.ignore();
-    getline(cin, name);
-    newProduct.name = name;
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                      EXISTING PRODUCTS                    |\n";
+    cout << "=============================================================\n";
 
-    cout << "Enter Product Description: ";
-    getline(cin, description);
-    newProduct.description = description;
-
-    cout << "Enter Product Price: $";
-    cin >> price;
-    newProduct.price = price;
-
-    cout << "Enter Stock Quantity: ";
-    cin >> stock;
-    newProduct.stockQuantity = stock;
-
-    cout << "Enter Store Name: ";
-    cin.ignore();
-    getline(cin, storeName);
-    newProduct.storeName = storeName;
-
-    string query = "INSERT INTO product (ProductName, Description, Price, StockQuantity, SellerID, StoreName) VALUES ('" +
-        newProduct.name + "', '" + newProduct.description + "', " + to_string(newProduct.price) + ", " +
-        to_string(newProduct.stockQuantity) + ", " + glbStr + ", '" + newProduct.storeName + "')";
-    if (!executeUpdate(query)) {
-        cout << "Error: " << mysql_error(conn) << endl;
-    }
-    else {
-        cout << "Product added successfully!\n";
-    }
-}
-
-void updateProduct() {
-    int productId;
-    string name, description, storeName;
-    double price;
-    int stock;
-
-    cout << "========== UPDATE PRODUCT ==========\n";
-    cout << "Enter Product ID to update: ";
-    cin >> productId;
-    cout << "Enter New Product Name: ";
-    cin.ignore();
-    getline(cin, name);
-    cout << "Enter New Product Description: ";
-    getline(cin, description);
-    cout << "Enter New Product Price: $";
-    cin >> price;
-    cout << "Enter New Stock Quantity: ";
-    cin >> stock;
-    cout << "Enter Store Name: ";
-    cin.ignore();
-    getline(cin, storeName);
-
-    string query = "UPDATE product SET ProductName = '" + name +
-        "', Description = '" + description +
-        "', Price = " + to_string(price) +
-        ", StockQuantity = " + to_string(stock) +
-        ", StoreName = '" + storeName +
-        "' WHERE ProductID = " + to_string(productId);
-    if (!executeUpdate(query)) {
-        cout << "Error: " << mysql_error(conn) << endl;
-    }
-    else {
-        cout << "Product updated successfully!\n";
-    }
-}
-
-void deleteProduct() {
-    int productId;
-
-    cout << "========== DELETE PRODUCT ==========\n";
-    cout << "Enter Product ID to delete: ";
-    cin >> productId;
-
-    string query = "DELETE FROM product WHERE ProductID = " + to_string(productId);
-    if (!executeUpdate(query)) {
-        cout << "Error: " << mysql_error(conn) << endl;
-    }
-    else {
-        cout << "Product deleted successfully!\n";
-    }
-}
-
-void viewAllProducts() {
-    string query = "SELECT * FROM product";
+    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
@@ -806,9 +729,272 @@ void viewAllProducts() {
     else {
         cout << "Error: " << mysql_error(conn) << endl;
     }
+
+    cout << "\n=============================================================\n";
+    cout << "|                         ADD PRODUCT                        |\n";
+    cout << "=============================================================\n";
+    cout << left << setw(20) << "Field" << setw(2) << ": " << "Input" << endl;
+    cout << "-------------------------------------------------------------\n";
+    cout << left << setw(20) << "Enter Product Name" << setw(2) << ": ";
+    cin.ignore();
+    getline(cin, name);
+    newProduct.name = name;
+
+    cout << left << setw(20) << "Enter Product Description" << setw(2) << ": ";
+    getline(cin, description);
+    newProduct.description = description;
+
+    cout << left << setw(20) << "Enter Product Price" << setw(2) << ": $";
+    cin >> price;
+    newProduct.price = price;
+
+    cout << left << setw(20) << "Enter Stock Quantity" << setw(2) << ": ";
+    cin >> stock;
+    newProduct.stockQuantity = stock;
+
+    query = "INSERT INTO product (ProductName, Description, Price, StockQuantity, SellerID) VALUES ('" +
+        newProduct.name + "', '" + newProduct.description + "', " + to_string(newProduct.price) + ", " +
+        to_string(newProduct.stockQuantity) + ", " + glbStr + ")";
+    if (!executeUpdate(query)) {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+    else {
+        cout << "Product added successfully!\n";
+    }
+
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Manage Products Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void updateProduct() {
+    int productId;
+    string newValue;
+    int choice;
+
+    clearScreen();
+    displayBanner();
+    cout << "\n=============================================================\n";
+    cout << "|                      EXISTING PRODUCTS                    |\n";
+    cout << "=============================================================\n";
+
+    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
+            << setw(10) << "Price" << setw(10) << "Stock" << endl;
+        cout << string(100, '=') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
+                << setw(10) << row[3] << setw(10) << row[4] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "\n=============================================================\n";
+    cout << "|                       UPDATE PRODUCT                       |\n";
+    cout << "=============================================================\n";
+    cout << "[1] Proceed to Update Product\n";
+    cout << "[2] Return Back\n";
+    cout << "=============================================================\n";
+    cout << "YOUR OPTION: ";
+
+    int choice1;
+    cin >> choice1;
+    cin.ignore(); // Clear the newline character from the input buffer
+
+    if (choice1 == 1) {
+        cout << "Enter Product ID to update: ";
+        cin >> productId;
+        cin.ignore(); // Clear the newline character from the input buffer
+
+        clearScreen();
+        displayBanner();
+        cout << "=============================================================\n";
+        cout << "|                  SELECTED PRODUCT DETAILS                 |\n";
+        cout << "=============================================================\n";
+
+        query = "SELECT * FROM product WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
+        res = executeSelectQuery(query);
+
+        if (res) {
+            MYSQL_ROW row;
+            if ((row = mysql_fetch_row(res))) {
+                cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
+                    << setw(10) << "Price" << setw(10) << "Stock" << endl;
+                cout << string(100, '=') << endl;
+                cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
+                    << setw(10) << row[3] << setw(10) << row[4] << endl;
+
+            }
+            else {
+                cout << "Product not found or you do not have permission to edit this product.\n";
+                return;
+            }
+            mysql_free_result(res);
+        }
+        else {
+            cout << "Error: " << mysql_error(conn) << endl;
+            return;
+        }
+
+        while (true) {
+            cout << "\n=============================================================\n";
+            cout << "|                       UPDATE PRODUCT                       |\n";
+            cout << "=============================================================\n";
+            cout << "[1] Update Product Name\n";
+            cout << "[2] Update Product Description\n";
+            cout << "[3] Update Product Price\n";
+            cout << "[4] Update Stock Quantity\n";
+            cout << "[5] Return to Manage Products Menu\n";
+            cout << "=============================================================\n";
+            cout << "YOUR OPTION: ";
+            cin >> choice;
+            cin.ignore(); // Clear the newline character from the input buffer
+
+            switch (choice) {
+            case 1:
+                cout << "Enter new Product Name: ";
+                getline(cin, newValue);
+                query = "UPDATE product SET ProductName = '" + newValue + "' WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
+                break;
+            case 2:
+                cout << "Enter new Product Description: ";
+                getline(cin, newValue);
+                query = "UPDATE product SET Description = '" + newValue + "' WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
+                break;
+            case 3:
+                cout << "Enter new Product Price: $";
+                getline(cin, newValue);
+                query = "UPDATE product SET Price = " + newValue + " WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
+                break;
+            case 4:
+                cout << "Enter new Stock Quantity: ";
+                getline(cin, newValue);
+                query = "UPDATE product SET StockQuantity = " + newValue + " WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
+                break;
+            case 5:
+                return; // Return to manage products menu
+            default:
+                cout << "Invalid option. Please try again.\n";
+                continue;
+            }
+
+            if (executeUpdate(query)) {
+                cout << "Product updated successfully!\n";
+            }
+            else {
+                cout << "Error updating product: " << mysql_error(conn) << endl;
+            }
+
+            cout << "\nPress Enter to return to the Manage Products Menu...";
+            cin.ignore();
+            cin.get();
+            return;
+        }
+    }
+    else if (choice1 == 2) {
+        return; // Return back to the previous menu
+    }
+    else {
+        cout << "Invalid option. Please try again.\n";
+    }
+}
+
+void deleteProduct() {
+    int productId;
+
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                      EXISTING PRODUCTS                    |\n";
+    cout << "=============================================================\n";
+
+    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
+            << setw(10) << "Price" << setw(10) << "Stock" << endl;
+        cout << string(100, '=') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
+                << setw(10) << row[3] << setw(10) << row[4] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "=============================================================\n";
+    cout << "|                       DELETE PRODUCT                       |\n";
+    cout << "=============================================================\n";
+    cout << left << setw(20) << "Enter Product ID to delete" << setw(2) << ": ";
+    cin >> productId;
+
+    query = "DELETE FROM product WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
+    if (!executeUpdate(query)) {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+    else {
+        cout << "Product deleted successfully!\n";
+    }
+
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Manage Products Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewAllProducts() {
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                      ALL PRODUCTS                          |\n";
+    cout << "=============================================================\n";
+
+    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
+            << setw(10) << "Price" << setw(10) << "Stock" << endl;
+        cout << string(100, '=') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
+                << setw(10) << row[3] << setw(10) << row[4] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << string(100, '=') << endl;
+    cout << "\nPress Enter to return to the Manage Products Menu...";
+    cin.ignore();
+    cin.get();
 }
 
 void searchProducts() {
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                     SEARCH PRODUCTS                        |\n";
+    cout << "=============================================================\n";
+
     string keyword, category, minPrice, maxPrice, minRating;
 
     cout << "Enter keyword: ";
@@ -829,7 +1015,7 @@ void searchProducts() {
 
     string query = "SELECT p.ProductID, p.ProductName, p.Description, p.Price, p.StockQuantity, AVG(r.Rating) as AvgRating "
         "FROM product p LEFT JOIN reviews r ON p.ProductID = r.ProductID "
-        "WHERE p.ProductName LIKE '%" + keyword + "%' ";
+        "WHERE p.SellerID = " + glbStr + " AND p.ProductName LIKE '%" + keyword + "%' ";
 
     if (!category.empty()) {
         query += "AND p.CategoryID = (SELECT CategoryID FROM category WHERE CategoryName = '" + category + "') ";
@@ -865,7 +1051,8 @@ void searchProducts() {
         cout << "Error: " << mysql_error(conn) << endl;
     }
 
-    cout << "Press Enter to continue...";
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Manage Products Menu...";
     cin.ignore();
     cin.get();
 }
@@ -874,17 +1061,22 @@ void sortProducts() {
     int choice;
     string query;
 
-    cout << "========== SORT PRODUCTS ==========\n";
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                       SORT PRODUCTS                        |\n";
+    cout << "=============================================================\n";
     cout << "[1] Sort by Price\n";
     cout << "[2] Sort by Name\n";
+    cout << "=============================================================\n";
     cout << "Select an option: ";
     cin >> choice;
 
     if (choice == 1) {
-        query = "SELECT * FROM product ORDER BY Price";
+        query = "SELECT * FROM product WHERE SellerID = " + glbStr + " ORDER BY Price";
     }
     else if (choice == 2) {
-        query = "SELECT * FROM product ORDER BY ProductName";
+        query = "SELECT * FROM product WHERE SellerID = " + glbStr + " ORDER BY ProductName";
     }
     else {
         cout << "Invalid option.\n";
@@ -908,6 +1100,11 @@ void sortProducts() {
     else {
         cout << "Error: " << mysql_error(conn) << endl;
     }
+
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Manage Products Menu...";
+    cin.ignore();
+    cin.get();
 }
 
 void approveSellers() {
