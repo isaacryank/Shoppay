@@ -26,11 +26,11 @@ struct User {
 };
 
 struct CartItem {
-    string productID;
-    int quantity;
-    double unitPrice;
-    string productName; // Added product name for easy reference
-    string storeName; // Added store name for easy reference
+    int productId;      // Product ID
+    int quantity;       // Quantity of the product
+    double unitPrice;   // Price per unit
+    string productName; // Name of the product
+    string storeName;   // Store name
 };
 
 struct Product {
@@ -59,14 +59,6 @@ struct Transaction {
     double amount;
     string type; // Transaction type (e.g., "top-up", "purchase", etc.)
     string date;
-};
-
-struct CartItem {
-    int productId;      // Product ID
-    int quantity;       // Quantity of the product
-    double unitPrice;   // Price per unit
-    string productName; // Name of the product
-    string storeName;   // Store name
 };
 
 // Minimal bcrypt functions implementation
@@ -2692,8 +2684,9 @@ void checkoutInterface() {
         cout << "Proceeding to checkout..." << endl;
         // Generate a new order and save to the database
         string query = "INSERT INTO orders (UserID, TotalAmount, Status, OrderDate) VALUES (" + currentUserID + ", " + to_string(totalAmount) + ", 'Pending', NOW())";
+        
         if (executeUpdate(query)) {
-            int orderId = mysql_insert_id(conn); // Ensure orderId is declared and assigned
+            
 
             for (const auto& item : cart) {
                 string itemQuery = "INSERT INTO order_items (OrderID, ProductID, Quantity, UnitPrice) VALUES (" + to_string(orderId) + ", " + to_string(item.productId) + ", " + to_string(item.quantity) + ", " + to_string(item.unitPrice) + ")";
@@ -2832,6 +2825,62 @@ void viewOrderHistoryInterface() {
 
     cout << "========================================================\n";
     cout << "\nPress Enter to return to the Customer Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void listSellers() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== LIST OF SELLERS ====================\n";
+
+    string query = "SELECT UserID, StoreName FROM user WHERE UserRole = 1 AND isApproved = 1";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Seller ID" << setw(30) << "Store Name" << endl;
+        cout << string(40, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(30) << row[1] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "========================================================\n";
+    cout << "\nPress Enter to return...";
+    cin.ignore();
+    cin.get();
+}
+
+void myOrderInterface() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== MY ORDERS ====================\n";
+
+    string query = "SELECT OrderID, TotalAmount, OrderStatus, OrderDate FROM orders WHERE UserID = " + currentUserID;
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Order ID" << setw(20) << "Total Amount" << setw(20) << "Status" << setw(20) << "Order Date" << endl;
+        cout << string(70, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << fixed << setprecision(2) << stod(row[1]) << setw(20) << row[2] << setw(20) << row[3] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "========================================================\n";
+    cout << "\nPress Enter to return...";
     cin.ignore();
     cin.get();
 }
