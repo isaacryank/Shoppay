@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 20, 2025 at 11:29 AM
+-- Generation Time: Jan 20, 2025 at 02:55 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,24 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `shoppay`
 --
-
--- --------------------------------------------------------
-
---
--- Table structure for table `address`
---
-
-CREATE TABLE `address` (
-  `AddressID` int(11) NOT NULL,
-  `UserID` int(11) DEFAULT NULL,
-  `AddressLine1` varchar(100) NOT NULL,
-  `AddressLine2` varchar(100) DEFAULT NULL,
-  `City` varchar(50) NOT NULL,
-  `State` varchar(50) NOT NULL,
-  `PostalCode` varchar(10) NOT NULL,
-  `Country` varchar(50) NOT NULL,
-  `IsDefault` tinyint(1) NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -106,6 +88,13 @@ CREATE TABLE `messages` (
   `MessageText` text NOT NULL,
   `Timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `messages`
+--
+
+INSERT INTO `messages` (`MessageID`, `SenderID`, `ReceiverID`, `MessageText`, `Timestamp`) VALUES
+(64, 6, 3, 'Hi sir, may i know when my item will be accept ?', '2025-01-20 12:50:04');
 
 -- --------------------------------------------------------
 
@@ -217,6 +206,7 @@ CREATE TABLE `user` (
   `Email` varchar(100) NOT NULL,
   `Password` varchar(50) NOT NULL,
   `FullName` varchar(100) NOT NULL,
+  `Address` varchar(255) NOT NULL,
   `PhoneNumber` varchar(15) NOT NULL,
   `UserRole` int(11) NOT NULL,
   `isApproved` tinyint(1) NOT NULL DEFAULT 0,
@@ -228,14 +218,14 @@ CREATE TABLE `user` (
 -- Dumping data for table `user`
 --
 
-INSERT INTO `user` (`UserID`, `Username`, `Email`, `Password`, `FullName`, `PhoneNumber`, `UserRole`, `isApproved`, `RegistrationDate`, `StoreName`) VALUES
-(1, 'Admin', 'Admin1@gmail.com', 'hashed_123', 'Isaac [Admin]', '014 690 5325', 2, 0, '2025-01-19 11:15:17', ''),
-(2, 'Admin2', 'Admin2@gmail.com', 'hashed_123', 'Mirul [Admin]', '013 233 4455', 2, 0, '2025-01-19 11:17:42', ''),
-(3, 'Seller', 'Seller1@gmail.com', 'hashed_abc123', 'Abdul Kazim', '013 232 3344', 1, 1, '2025-01-19 11:18:28', '[UGREEN]'),
-(4, 'Seller2', 'seller2@gmail.com', 'hashed_abc123', 'Tan Weng', '013 445 3232', 1, 0, '2025-01-19 11:19:42', '[DIY]'),
-(5, 'Veron', 'veron@gmail.com', 'hashed_123', 'Veron Jr', '012 332 2345', 0, 0, '2025-01-19 12:31:41', ''),
-(6, 'Isaac', 'isaac@gmail.com', 'hashed_123', 'Isaac ryan', '014 225 3485', 0, 0, '2025-01-19 12:32:24', ''),
-(7, 'Seller3', 'seller3@gmail.com', 'hashed_123', 'Anis Hazuki', '012 323 4343', 1, 0, '2025-01-19 15:23:27', '[GOJODOQ]');
+INSERT INTO `user` (`UserID`, `Username`, `Email`, `Password`, `FullName`, `Address`, `PhoneNumber`, `UserRole`, `isApproved`, `RegistrationDate`, `StoreName`) VALUES
+(1, 'Admin', 'Admin1@gmail.com', 'hashed_123', 'Isaac [Admin]', '', '014 690 5325', 2, 0, '2025-01-19 11:15:17', ''),
+(2, 'Admin2', 'Admin2@gmail.com', 'hashed_123', 'Mirul [Admin]', '', '013 233 4455', 2, 0, '2025-01-19 11:17:42', ''),
+(3, 'Seller', 'Seller1@gmail.com', 'hashed_abc123', 'Abdul Kazim', '', '013 232 3344', 1, 1, '2025-01-19 11:18:28', 'UGREEN'),
+(4, 'Seller2', 'seller2', 'hashed_123', 'Tan Cheng', 'UTeM', '013 445 3232', 1, 1, '2025-01-19 11:19:42', 'DIY'),
+(5, 'Veron', 'veron@gmail.com', 'hashed_123', 'Veron Jr', '', '012 332 2345', 0, 0, '2025-01-19 12:31:41', ''),
+(6, 'Isaac', 'isaac', 'hashed_123', 'Isaac Ryan', 'Taman Tambun, Melaka', '014 225 3485', 0, 0, '2025-01-19 12:32:24', ''),
+(7, 'Seller3', 'seller3@gmail.com', 'hashed_123', 'Anis Hazuki', '', '012 323 4343', 1, 1, '2025-01-19 15:23:27', 'GOJODOQ');
 
 -- --------------------------------------------------------
 
@@ -248,6 +238,13 @@ CREATE TABLE `wallet` (
   `UserID` int(11) DEFAULT NULL,
   `Balance` double NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `wallet`
+--
+
+INSERT INTO `wallet` (`WalletID`, `UserID`, `Balance`) VALUES
+(1, 6, 140);
 
 -- --------------------------------------------------------
 
@@ -266,13 +263,6 @@ CREATE TABLE `wallet_transaction` (
 --
 -- Indexes for dumped tables
 --
-
---
--- Indexes for table `address`
---
-ALTER TABLE `address`
-  ADD PRIMARY KEY (`AddressID`),
-  ADD KEY `UserID` (`UserID`);
 
 --
 -- Indexes for table `audit_log`
@@ -377,12 +367,6 @@ ALTER TABLE `wallet_transaction`
 --
 
 --
--- AUTO_INCREMENT for table `address`
---
-ALTER TABLE `address`
-  MODIFY `AddressID` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
@@ -410,7 +394,7 @@ ALTER TABLE `coupon`
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `MessageID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+  MODIFY `MessageID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT for table `orders`
@@ -452,7 +436,7 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `wallet`
 --
 ALTER TABLE `wallet`
-  MODIFY `WalletID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `WalletID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `wallet_transaction`
@@ -463,12 +447,6 @@ ALTER TABLE `wallet_transaction`
 --
 -- Constraints for dumped tables
 --
-
---
--- Constraints for table `address`
---
-ALTER TABLE `address`
-  ADD CONSTRAINT `address_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `user` (`UserID`);
 
 --
 -- Constraints for table `audit_log`
