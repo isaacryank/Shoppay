@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 19, 2025 at 10:38 AM
+-- Generation Time: Jan 20, 2025 at 11:29 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -166,6 +166,31 @@ CREATE TABLE `product` (
   `StoreName` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `product`
+--
+
+INSERT INTO `product` (`ProductID`, `ProductName`, `Description`, `Price`, `StockQuantity`, `SellerID`, `CategoryID`, `StoreName`) VALUES
+(1, 'EARBUDS', 'MODEL TYS 110', 25, 47, 3, NULL, 'ugreen');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `system_settings`
+--
+
+CREATE TABLE `system_settings` (
+  `SettingName` varchar(50) NOT NULL,
+  `Value` double NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `system_settings`
+--
+
+INSERT INTO `system_settings` (`SettingName`, `Value`) VALUES
+('CommissionRate', 0.02);
+
 -- --------------------------------------------------------
 
 --
@@ -204,15 +229,13 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`UserID`, `Username`, `Email`, `Password`, `FullName`, `PhoneNumber`, `UserRole`, `isApproved`, `RegistrationDate`, `StoreName`) VALUES
-(1, 'Admin', 'Admin@yahoo.com', '123', 'Isaac [Admin]', '014 6905325', 2, 0, '2025-01-18 12:59:14', NULL),
-(2, 'Seller', 'Seller@gmail.com', '123', 'Irfan Mus', '014 2332344', 1, 1, '2025-01-18 14:04:37', NULL),
-(3, 'Admin2', 'Admin2yahoo.com', '123', 'Roz [Admin]', '013 4457763', 2, 0, '2025-01-18 14:07:33', NULL),
-(4, 'asjhas', 'asdas', '123', 'asdas', '123123', -1389655693, 0, '2025-01-18 14:07:48', NULL),
-(5, 'Seller2', 'Seller2@gmail.com', '123', 'Kanye West', '012 222 2323', 1, 0, '2025-01-18 14:57:25', NULL),
-(6, 'Seller3', 'seller3@gmail.com', '123', 'Tee Yong Jian', '019 833 2121', 1, 0, '2025-01-18 14:58:20', NULL),
-(7, 'Isaac', 'isaac@gmail.com', '123', 'Isaac Ryan', '014 225 3485', 0, 0, '2025-01-18 14:59:13', NULL),
-(8, 'Roz', '123', '123', 'Rozita', '013 223 4444', 0, 0, '2025-01-18 15:00:03', NULL),
-(9, 'Amirul', 'mirul@gmail.com', '12', 'Amirul Hafiz', '013 998 2323', 0, 0, '2025-01-18 15:00:40', NULL);
+(1, 'Admin', 'Admin1@gmail.com', 'hashed_123', 'Isaac [Admin]', '014 690 5325', 2, 0, '2025-01-19 11:15:17', ''),
+(2, 'Admin2', 'Admin2@gmail.com', 'hashed_123', 'Mirul [Admin]', '013 233 4455', 2, 0, '2025-01-19 11:17:42', ''),
+(3, 'Seller', 'Seller1@gmail.com', 'hashed_abc123', 'Abdul Kazim', '013 232 3344', 1, 1, '2025-01-19 11:18:28', '[UGREEN]'),
+(4, 'Seller2', 'seller2@gmail.com', 'hashed_abc123', 'Tan Weng', '013 445 3232', 1, 0, '2025-01-19 11:19:42', '[DIY]'),
+(5, 'Veron', 'veron@gmail.com', 'hashed_123', 'Veron Jr', '012 332 2345', 0, 0, '2025-01-19 12:31:41', ''),
+(6, 'Isaac', 'isaac@gmail.com', 'hashed_123', 'Isaac ryan', '014 225 3485', 0, 0, '2025-01-19 12:32:24', ''),
+(7, 'Seller3', 'seller3@gmail.com', 'hashed_123', 'Anis Hazuki', '012 323 4343', 1, 0, '2025-01-19 15:23:27', '[GOJODOQ]');
 
 -- --------------------------------------------------------
 
@@ -317,6 +340,12 @@ ALTER TABLE `product`
   ADD KEY `product_ibfk_2` (`CategoryID`);
 
 --
+-- Indexes for table `system_settings`
+--
+ALTER TABLE `system_settings`
+  ADD PRIMARY KEY (`SettingName`);
+
+--
 -- Indexes for table `transaction`
 --
 ALTER TABLE `transaction`
@@ -381,7 +410,7 @@ ALTER TABLE `coupon`
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `MessageID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `MessageID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- AUTO_INCREMENT for table `orders`
@@ -405,7 +434,7 @@ ALTER TABLE `order_status`
 -- AUTO_INCREMENT for table `product`
 --
 ALTER TABLE `product`
-  MODIFY `ProductID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ProductID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `transaction`
@@ -417,7 +446,7 @@ ALTER TABLE `transaction`
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `wallet`
