@@ -3261,53 +3261,68 @@ void viewAndUpdateSellerProfile(const string& sellerID) {
 }
 
 void sellerMessagePageInterface() {
-    while (true) {
-        clearScreen();
-        displayBanner();
-        cout << "==================== MESSAGE PAGE ====================\n";
-        listCustomers(); // Function to list all customers who have interacted with the seller
-
-        int customerID;
-        cout << "\nEnter Customer ID to view messages (or 0 to go back): ";
-        cin >> customerID;
-
-        if (customerID == 0) {
-            return; // Back to Seller Menu
-        }
-
-        // Display chat history
-        viewMessages(stoi(glbStr), customerID);
-
-        string reply;
-        cout << "Enter your message: ";
-        cin.ignore(); // Clear the newline character from the input buffer
-        getline(cin, reply);
-
-        sendMessage(stoi(glbStr), customerID, reply); // Send message from seller to customer
-        viewMessages(stoi(glbStr), customerID); // View updated chat history with the customer
-
-        cout << "\nPress Enter to return to the Message Page...";
-        cin.ignore();
-        cin.get();
-    }
-}
-
-void listCustomers() {
     clearScreen();
     displayBanner();
-    cout << "==================== LIST OF CUSTOMERS ====================\n";
 
-    // Query to get customers who have interacted with the seller
-    string query = "SELECT DISTINCT u.UserID, u.Username FROM messages m INNER JOIN user u ON m.SenderID = u.UserID OR m.ReceiverID = u.UserID WHERE (m.ReceiverID = " + glbStr + ") AND u.UserRole = 0";
+    // Query to get the messages sent to the current seller
+    string query = "SELECT u.UserID, u.Username, m.SenderID, m.MessageText, m.Timestamp "
+        "FROM messages m "
+        "INNER JOIN user u ON m.SenderID = u.UserID "
+        "WHERE m.ReceiverID = " + currentUserID + " "
+        "ORDER BY m.Timestamp DESC";
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
         MYSQL_ROW row;
-        cout << left << setw(10) << "Customer ID" << setw(30) << "Username" << endl;
-        cout << string(40, '-') << endl;
+        if (mysql_num_rows(res) == 0) {
+            // No messages found
+            cout << "=============================================================\n";
+            cout << "|                         MESSAGES                           |\n";
+            cout << "=============================================================\n";
+            cout << "\nTHERE'S NO MESSAGES FROM CUSTOMERS.\n";
+            cout << "=============================================================\n";
+            cout << "[1] RETURN BACK\n";
+            cout << "\nYOUR OPTION: ";
 
-        while ((row = mysql_fetch_row(res))) {
-            cout << left << setw(10) << row[0] << setw(30) << row[1] << endl;
+            int option;
+            cin >> option;
+            if (option == 1) {
+                return;
+            }
+        }
+        else {
+            // Messages found
+            cout << "=============================================================\n";
+            cout << "|                         MESSAGES                           |\n";
+            cout << "=============================================================\n";
+
+            set<int> displayedCustomers;
+
+            while ((row = mysql_fetch_row(res))) {
+                int customerID = stoi(row[0]);
+                string username = row[1] ? row[1] : "Unknown User";
+
+                // Only display the latest message from each customer
+                if (displayedCustomers.find(customerID) == displayedCustomers.end()) {
+                    cout << "- [" << username << "]  [ CustomerID = '" << customerID << "']\n";
+                    cout << "Customer: " << row[3] << " [" << row[4] << "]\n\n";
+                    displayedCustomers.insert(customerID);
+                }
+            }
+
+            cout << "=============================================================\n";
+            cout << "[1] SELECT YOUR MESSAGE\n";
+            cout << "[2] RETURN BACK\n";
+            cout << "\nYOUR OPTION: ";
+
+            int option;
+            cin >> option;
+            if (option == 1) {
+                selectMessage();
+            }
+            else {
+                return;
+            }
         }
         mysql_free_result(res);
     }
@@ -3315,8 +3330,7 @@ void listCustomers() {
         cout << "Error: " << mysql_error(conn) << endl;
     }
 
-    cout << "========================================================\n";
-    cout << "\nPress Enter to return...";
+    cout << "\nPress Enter to return to the Message Page...";
     cin.ignore();
     cin.get();
 }
