@@ -138,9 +138,11 @@ void manageChatsWithCustomers();
 void cancelOrder(const string& orderID);
 void viewSalesTrends(const string& sellerID);
 void viewAndUpdateProfile(const string& userID);
+void viewAndUpdateSellerProfile(const string& sellerID);
 
 void manageProfileInterface();
 void manageChatsWithCustomersInterface();
+void sellerMessagePageInterface();
 void approveCustomerOrdersInterface();
 void viewWalletBalanceInterface();
 void viewSalesReportsInterface();
@@ -150,6 +152,7 @@ void browseProductsInterface();
 void generateSalesReportInterface();
 void viewCustomerDemographicsInterface();
 void viewProductPopularityInterface();
+void listCustomers();
 void Logout();
 
 void myWalletInterface(); 
@@ -549,10 +552,10 @@ void sellerMenu() {
 
         switch (choice) {
         case 1:
-            viewAndUpdateProfile(currentUserID);
+            viewAndUpdateSellerProfile(currentUserID);
             break;
         case 2:
-            manageChatsWithCustomersInterface();
+            sellerMessagePageInterface();
             break;
         case 3:
             manageProducts();
@@ -2310,76 +2313,102 @@ void Logout() {
 
 void viewAndUpdateProfile(const string& userID) {
     clearScreen();
-    string query = "SELECT Username, Email, FullName, Address, PhoneNumber FROM user WHERE UserID = " + userID;
+    displayBanner();
+
+    // Query to get the user's profile information
+    string query = "SELECT UserID, Username, Email, FullName, Address, PhoneNumber, Password FROM user WHERE UserID = " + userID;
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
-        MYSQL_ROW row = mysql_fetch_row(res);
-        if (row) {
-            // Display profile details with an improved look
+        MYSQL_ROW row;
+        if ((row = mysql_fetch_row(res))) {
+            // Display user's profile information
             cout << "=============================================================\n";
             cout << "|                         PROFILE DETAILS                    |\n";
             cout << "=============================================================\n";
-            cout << "| Username       : " << left << setw(40) << row[0] << "|\n";
-            cout << "| Email          : " << left << setw(40) << row[1] << "|\n";
-            cout << "| Full Name      : " << left << setw(40) << row[2] << "|\n";
-            cout << "| Address        : " << left << setw(40) << row[3] << "|\n";
-            cout << "| Phone Number   : " << left << setw(40) << row[4] << "|\n";
+            cout << "Username: " << row[1] << "\n";
+            cout << "Email: " << row[2] << "\n";
+            cout << "Full Name: " << row[3] << "\n";
+            cout << "Address: " << row[4] << "\n";
+            cout << "Phone Number: " << row[5] << "\n";
+            cout << "Password: " << "********" << "\n"; // Password is masked for security
             cout << "=============================================================\n";
+
+            // Provide options to update profile
+            cout << "[1] Update Username\n";
+            cout << "[2] Update Email\n";
+            cout << "[3] Update Full Name\n";
+            cout << "[4] Update Address\n";
+            cout << "[5] Update Phone Number\n";
+            cout << "[6] Update Password\n";
+            cout << "[7] Return to Main Menu\n";
+            cout << "\nYOUR OPTION: ";
+
+            int option;
+            cin >> option;
+            cin.ignore(); // Clear the newline character from the input buffer
+
+            string newValue;
+            switch (option) {
+            case 1:
+                cout << "Enter new Username: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET Username = '" + newValue + "' WHERE UserID = " + userID;
+                break;
+            case 2:
+                cout << "Enter new Email: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET Email = '" + newValue + "' WHERE UserID = " + userID;
+                break;
+            case 3:
+                cout << "Enter new Full Name: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET FullName = '" + newValue + "' WHERE UserID = " + userID;
+                break;
+            case 4:
+                cout << "Enter new Address: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET Address = '" + newValue + "' WHERE UserID = " + userID;
+                break;
+            case 5:
+                cout << "Enter new Phone Number: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET PhoneNumber = '" + newValue + "' WHERE UserID = " + userID;
+                break;
+            case 6:
+                cout << "Enter new Password: ";
+                getline(cin, newValue);
+                newValue = bcrypt::generateHash(newValue); // Hash the password before storing
+                query = "UPDATE user SET Password = '" + newValue + "' WHERE UserID = " + userID;
+                break;
+            case 7:
+                return; // Return to main menu
+            default:
+                cout << "Invalid option. Returning to main menu.\n";
+                return;
+            }
+
+            // Execute the update query
+            if (executeUpdate(query)) {
+                cout << "Profile updated successfully!\n";
+            }
+            else {
+                cout << "Error updating profile: " << mysql_error(conn) << endl;
+            }
+
+            // Display updated profile
+            viewAndUpdateProfile(userID);
         }
         else {
-            cout << "No profile found for the provided UserID.\n";
-            mysql_free_result(res);
-            return;
+            cout << "User not found.\n";
         }
         mysql_free_result(res);
     }
     else {
         cout << "Error: " << mysql_error(conn) << endl;
-        return;
     }
 
-    cout << "\nDo you want to update your profile? (y/n): ";
-    char updateChoice;
-    cin >> updateChoice;
-
-    if (tolower(updateChoice) == 'y') {
-        cout << "=============================================================\n";
-        cout << "|                      UPDATE PROFILE                        |\n";
-        cout << "=============================================================\n";
-
-        string username, email, password, fullName, address, phoneNumber;
-
-        cout << "| Enter new Username     : ";
-        cin.ignore(); // To ignore any leftover newline character from previous input
-        getline(cin, username);
-
-        cout << "| Enter new Email        : ";
-        getline(cin, email);
-
-        cout << "| Enter new Password     : ";
-        getline(cin, password);
-        password = bcrypt::generateHash(password); // Hash the password
-
-        cout << "| Enter new Full Name    : ";
-        getline(cin, fullName);
-
-        cout << "| Enter new Address      : ";
-        getline(cin, address);
-
-        cout << "| Enter new Phone Number : ";
-        getline(cin, phoneNumber);
-
-        string query = "UPDATE user SET Username = '" + username + "', Email = '" + email + "', Password = '" + password + "', FullName = '" + fullName + "', Address = '" + address + "', PhoneNumber = '" + phoneNumber + "' WHERE UserID = " + userID;
-        if (!executeUpdate(query)) {
-            cout << "Error: " << mysql_error(conn) << endl;
-        }
-        else {
-            cout << "Profile updated successfully!\n";
-        }
-    }
-
-    cout << "\nPress Enter to continue...";
+    cout << "\nPress Enter to return to the Main Menu...";
     cin.ignore();
     cin.get();
 }
@@ -3121,6 +3150,164 @@ void myOrderInterface() {
 
         while ((row = mysql_fetch_row(res))) {
             cout << left << setw(10) << row[0] << setw(20) << fixed << setprecision(2) << stod(row[1]) << setw(20) << row[2] << setw(20) << row[3] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "========================================================\n";
+    cout << "\nPress Enter to return...";
+    cin.ignore();
+    cin.get();
+}
+
+// New function definition for seller profile update
+void viewAndUpdateSellerProfile(const string& sellerID) {
+    clearScreen();
+    displayBanner();
+
+    // Query to get the seller's profile information
+    string query = "SELECT UserID, StoreName, Username, Email, PhoneNumber, Password FROM user WHERE UserID = " + sellerID;
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        if ((row = mysql_fetch_row(res))) {
+            // Display seller's profile information
+            cout << "=============================================================\n";
+            cout << "|                      SELLER PROFILE                        |\n";
+            cout << "=============================================================\n";
+            cout << "Store Name: " << (row[1] ? row[1] : "Unknown Store") << "\n";
+            cout << "User ID: " << row[0] << "\n";
+            cout << "Username: " << row[2] << "\n";
+            cout << "Email: " << row[3] << "\n";
+            cout << "Phone Number: " << row[4] << "\n";
+            cout << "Password: " << "********" << "\n"; // Password is masked for security
+            cout << "=============================================================\n";
+
+            // Provide options to update profile
+            cout << "[1] Update Store Name\n";
+            cout << "[2] Update Username\n";
+            cout << "[3] Update Email\n";
+            cout << "[4] Update Phone Number\n";
+            cout << "[5] Update Password\n";
+            cout << "[6] Return to Main Menu\n";
+            cout << "\nYOUR OPTION: ";
+
+            int option;
+            cin >> option;
+            cin.ignore(); // Clear the newline character from the input buffer
+
+            string newValue;
+            switch (option) {
+            case 1:
+                cout << "Enter new Store Name: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET StoreName = '" + newValue + "' WHERE UserID = " + sellerID;
+                break;
+            case 2:
+                cout << "Enter new Username: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET Username = '" + newValue + "' WHERE UserID = " + sellerID;
+                break;
+            case 3:
+                cout << "Enter new Email: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET Email = '" + newValue + "' WHERE UserID = " + sellerID;
+                break;
+            case 4:
+                cout << "Enter new Phone Number: ";
+                getline(cin, newValue);
+                query = "UPDATE user SET PhoneNumber = '" + newValue + "' WHERE UserID = " + sellerID;
+                break;
+            case 5:
+                cout << "Enter new Password: ";
+                getline(cin, newValue);
+                newValue = bcrypt::generateHash(newValue); // Hash the password before storing
+                query = "UPDATE user SET Password = '" + newValue + "' WHERE UserID = " + sellerID;
+                break;
+            case 6:
+                return; // Return to main menu
+            default:
+                cout << "Invalid option. Returning to main menu.\n";
+                return;
+            }
+
+            // Execute the update query
+            if (executeUpdate(query)) {
+                cout << "Profile updated successfully!\n";
+            }
+            else {
+                cout << "Error updating profile: " << mysql_error(conn) << endl;
+            }
+
+            // Display updated profile
+            viewAndUpdateSellerProfile(sellerID);
+        }
+        else {
+            cout << "Seller not found.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "\nPress Enter to return to the Main Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void sellerMessagePageInterface() {
+    while (true) {
+        clearScreen();
+        displayBanner();
+        cout << "==================== MESSAGE PAGE ====================\n";
+        listCustomers(); // Function to list all customers who have interacted with the seller
+
+        int customerID;
+        cout << "\nEnter Customer ID to view messages (or 0 to go back): ";
+        cin >> customerID;
+
+        if (customerID == 0) {
+            return; // Back to Seller Menu
+        }
+
+        // Display chat history
+        viewMessages(stoi(glbStr), customerID);
+
+        string reply;
+        cout << "Enter your message: ";
+        cin.ignore(); // Clear the newline character from the input buffer
+        getline(cin, reply);
+
+        sendMessage(stoi(glbStr), customerID, reply); // Send message from seller to customer
+        viewMessages(stoi(glbStr), customerID); // View updated chat history with the customer
+
+        cout << "\nPress Enter to return to the Message Page...";
+        cin.ignore();
+        cin.get();
+    }
+}
+
+void listCustomers() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== LIST OF CUSTOMERS ====================\n";
+
+    // Query to get customers who have interacted with the seller
+    string query = "SELECT DISTINCT u.UserID, u.Username FROM messages m INNER JOIN user u ON m.SenderID = u.UserID OR m.ReceiverID = u.UserID WHERE (m.ReceiverID = " + glbStr + ") AND u.UserRole = 0";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Customer ID" << setw(30) << "Username" << endl;
+        cout << string(40, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(30) << row[1] << endl;
         }
         mysql_free_result(res);
     }
