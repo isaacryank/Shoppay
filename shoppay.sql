@@ -51,17 +51,6 @@ CREATE TABLE `cart` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `category`
---
-
-CREATE TABLE `category` (
-  `CategoryID` int(11) NOT NULL,
-  `CategoryName` varchar(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `coupon`
 --
 
@@ -151,16 +140,14 @@ CREATE TABLE `product` (
   `Price` double NOT NULL,
   `StockQuantity` int(11) NOT NULL,
   `SellerID` int(11) DEFAULT NULL,
-  `CategoryID` int(11) DEFAULT NULL,
-  `StoreName` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `product`
 --
 
-INSERT INTO `product` (`ProductID`, `ProductName`, `Description`, `Price`, `StockQuantity`, `SellerID`, `CategoryID`, `StoreName`) VALUES
-(1, 'EARBUDS', 'MODEL TYS 110', 25, 47, 3, NULL, 'ugreen');
+INSERT INTO `product` (`ProductID`, `ProductName`, `Description`, `Price`, `StockQuantity`, `SellerID`) VALUES
+(1, 'EARBUDS', 'MODEL TYS 110', 25, 47, 3);
 
 -- --------------------------------------------------------
 
@@ -280,12 +267,6 @@ ALTER TABLE `cart`
   ADD KEY `ProductID` (`ProductID`);
 
 --
--- Indexes for table `category`
---
-ALTER TABLE `category`
-  ADD PRIMARY KEY (`CategoryID`);
-
---
 -- Indexes for table `coupon`
 --
 ALTER TABLE `coupon`
@@ -327,7 +308,6 @@ ALTER TABLE `order_status`
 ALTER TABLE `product`
   ADD PRIMARY KEY (`ProductID`),
   ADD KEY `SellerID` (`SellerID`),
-  ADD KEY `product_ibfk_2` (`CategoryID`);
 
 --
 -- Indexes for table `system_settings`
@@ -377,12 +357,6 @@ ALTER TABLE `audit_log`
 --
 ALTER TABLE `cart`
   MODIFY `CartID` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `category`
---
-ALTER TABLE `category`
-  MODIFY `CategoryID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `coupon`
@@ -487,7 +461,6 @@ ALTER TABLE `order_items`
 --
 ALTER TABLE `product`
   ADD CONSTRAINT `product_ibfk_1` FOREIGN KEY (`SellerID`) REFERENCES `user` (`UserID`),
-  ADD CONSTRAINT `product_ibfk_2` FOREIGN KEY (`CategoryID`) REFERENCES `category` (`CategoryID`);
 
 --
 -- Constraints for table `transaction`
