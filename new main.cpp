@@ -152,13 +152,15 @@ void browseProductsInterface();
 void generateSalesReportInterface();
 void viewCustomerDemographicsInterface();
 void viewProductPopularityInterface();
+void viewProductDetails(int productID);
+void addToCart(int productID, int stock, double price, const string& productName, const string& storeName, int quantity);
+void viewByStore();
 void listCustomers();
 void Logout();
 
 void myWalletInterface(); 
 void sellerWalletInterface();
 void messagePageInterface();
-void viewProductDetails(int productId);
 void myCartInterface();
 void checkoutInterface();
 void paymentTransaction(int orderId);
@@ -620,7 +622,7 @@ void customerMenu() {
             messagePageInterface();
             break;
         case 4:
-            browseProductsInterface();
+            browseProducts();
             break;
         case 5:
             myCartInterface();
@@ -1432,29 +1434,180 @@ void viewSalesReports() {
 }
 
 void browseProducts() {
-    string query = "SELECT * FROM product";
+    while (true) {
+        clearScreen();
+        displayBanner();
+        cout << "==================== BROWSE PRODUCTS ====================\n";
+        string query = "SELECT p.ProductID, p.ProductName, p.Price, p.StockQuantity, u.StoreName FROM product p "
+            "INNER JOIN user u ON p.SellerID = u.UserID";
+        MYSQL_RES* res = executeSelectQuery(query);
+
+        if (res) {
+            MYSQL_ROW row;
+            cout << left << setw(10) << "ProductID" << setw(20) << "Store Name" << setw(30) << "Product Name" << setw(10) << "Price" << setw(10) << "Stock" << endl;
+            cout << string(80, '-') << endl;
+
+            while ((row = mysql_fetch_row(res))) {
+                cout << left << setw(10) << row[0] << setw(20) << row[4] << setw(30) << row[1] << setw(10) << fixed << setprecision(2) << stod(row[2]) << setw(10) << row[3] << endl;
+            }
+            mysql_free_result(res);
+        }
+        else {
+            cout << "Error: " << mysql_error(conn) << endl;
+        }
+
+        cout << "\n[1] Select Product by ID\n";
+        cout << "[2] View By Store\n";
+        cout << "[3] Return Back\n";
+        cout << "Select an option: ";
+
+        int choice;
+        cin >> choice;
+
+        switch (choice) {
+        case 1: {
+            int productID;
+            cout << "Enter Product ID to view details: ";
+            cin >> productID;
+            viewProductDetails(productID);
+            break;
+        }
+        case 2: {
+            viewByStore();
+            break;
+        }
+        case 3:
+            return; // Return to previous menu
+        default:
+            cout << "Invalid option. Please try again.\n";
+            break;
+        }
+
+        cout << "\nPress Enter to continue...";
+        cin.ignore();
+        cin.get();
+    }
+}
+
+void viewByStore() {
+    clearScreen();
+    displayBanner();
+
+    // Retrieve distinct store names
+    string storeQuery = "SELECT DISTINCT u.UserID, u.StoreName FROM product p "
+        "INNER JOIN user u ON p.SellerID = u.UserID";
+    MYSQL_RES* storeRes = executeSelectQuery(storeQuery);
+
+    if (storeRes) {
+        MYSQL_ROW storeRow;
+        while ((storeRow = mysql_fetch_row(storeRes))) {
+            int storeID = stoi(storeRow[0]);
+            string storeName = storeRow[1];
+
+            cout << endl << string(17, '=') << endl;
+            cout << "| " << setw(14) << storeName << " |\n";
+            cout << string(17, '=') << endl;
+
+            string productQuery = "SELECT ProductID, ProductName, Price, StockQuantity FROM product WHERE SellerID = " + to_string(storeID);
+            MYSQL_RES* productRes = executeSelectQuery(productQuery);
+
+            if (productRes) {
+                MYSQL_ROW productRow;
+                cout << left << setw(10) << "ProductID" << setw(30) << "Product Name" << setw(10) << "Price" << setw(10) << "Stock" << endl;
+                cout << string(60, '-') << endl;
+
+                while ((productRow = mysql_fetch_row(productRes))) {
+                    cout << left << setw(10) << productRow[0] << setw(30) << productRow[1] << setw(10) << fixed << setprecision(2) << stod(productRow[2]) << setw(10) << productRow[3] << endl;
+                }
+                mysql_free_result(productRes);
+                cout << string(60, '-') << endl;
+            }
+            else {
+                cout << "Error: " << mysql_error(conn) << endl;
+            }
+        }
+        mysql_free_result(storeRes);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "\n[1] Select Product by ID\n";
+    cout << "[2] Return Back\n";
+    cout << "Select an option: ";
+
+    int choice;
+    cin >> choice;
+
+    if (choice == 1) {
+        int productID;
+        cout << "Enter Product ID to view details: ";
+        cin >> productID;
+        viewProductDetails(productID);
+    }
+}
+
+void viewProductDetails(int productID) {
+    clearScreen();
+    displayBanner();
+    cout << "==================== PRODUCT DETAILS ====================\n";
+
+    string query = "SELECT p.ProductName, p.Description, p.Price, p.StockQuantity, u.StoreName FROM product p "
+        "INNER JOIN user u ON p.SellerID = u.UserID WHERE p.ProductID = " + to_string(productID);
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
-        MYSQL_ROW row;
-        cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
-            << setw(10) << "Price" << setw(10) << "Stock" << endl;
-        cout << string(100, '=') << endl;
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (row) {
+            cout << "Product ID: " << productID << endl;
+            cout << "Store Name: " << row[4] << endl;
+            cout << "Product Name: " << row[0] << endl;
+            cout << "Description: " << row[1] << endl;
+            cout << "Price: $" << fixed << setprecision(2) << stod(row[2]) << endl;
+            cout << "Stock Quantity: " << row[3] << endl;
 
-        while ((row = mysql_fetch_row(res))) {
-            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
-                << setw(10) << row[3] << setw(10) << row[4] << endl;
+            // Prompt to add product to cart
+            cout << "\nWould you like to add this product to your cart? (yes/no): ";
+            string choice;
+            cin >> choice;
+            if (choice == "yes") {
+                int quantity;
+                cout << "Enter quantity: ";
+                cin >> quantity;
+                addToCart(productID, stoi(row[3]), stod(row[2]), row[0], row[4], quantity);
+            }
+        }
+        else {
+            cout << "Product not found." << endl;
         }
         mysql_free_result(res);
     }
     else {
         cout << "Error: " << mysql_error(conn) << endl;
     }
-
-    cout << "Press Enter to continue...";
-    cin.ignore();
-    cin.get();
 }
+
+void addToCart(int productID, int stock, double price, const string& productName, const string& storeName, int quantity) {
+    if (quantity > stock) {
+        cout << "Quantity exceeds available stock. Please enter a valid quantity." << endl;
+        return;
+    }
+
+    for (auto& item : cart) {
+        if (item.productId == productID) {
+            item.quantity += quantity;
+            totalAmount += price * quantity;
+            cout << "Product added to cart successfully!" << endl;
+            return;
+        }
+    }
+
+    CartItem newItem = {productID, quantity, price, productName, storeName};
+    cart.push_back(newItem);
+    totalAmount += price * quantity;
+    cout << "Product added to cart successfully!" << endl;
+}
+
 
 void viewCartWithChatOption() {
     string query = "SELECT c.ProductID, p.ProductName, p.SellerID, u.StoreName FROM cart c INNER JOIN product p ON c.ProductID = p.ProductID INNER JOIN user u ON p.SellerID = u.UserID WHERE c.UserID = " + glbStr;
@@ -3054,38 +3207,6 @@ void browseProductsInterface() {
         cin.ignore();
         cin.get();
     }
-}
-
-void viewProductDetails(int productId) {
-    clearScreen();
-    displayBanner();
-    cout << "==================== PRODUCT DETAILS ====================\n";
-    string query = "SELECT * FROM product WHERE ProductID = " + to_string(productId);
-    MYSQL_RES* res = executeSelectQuery(query);
-
-    if (res) {
-        MYSQL_ROW row = mysql_fetch_row(res);
-        if (row) {
-            cout << "Product ID: " << row[0] << endl;
-            cout << "Name: " << row[1] << endl;
-            cout << "Description: " << row[2] << endl;
-            cout << "Price: $" << fixed << setprecision(2) << stod(row[3]) << endl;
-            cout << "Stock Quantity: " << row[4] << endl;
-            cout << "Store Name: " << row[7] << endl;
-        }
-        else {
-            cout << "Product not found." << endl;
-        }
-        mysql_free_result(res);
-    }
-    else {
-        cout << "Error: " << mysql_error(conn) << endl;
-    }
-
-    cout << "=========================================================\n";
-    cout << "\nPress Enter to return to the Browse Products Menu...";
-    cin.ignore();
-    cin.get();
 }
 
 void myCartInterface() {
