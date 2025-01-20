@@ -135,6 +135,7 @@ void listCustomersForChat(int sellerID);
 void manageChatsWithCustomers();
 void cancelOrder(const string& orderID);
 void viewSalesTrends(const string& sellerID);
+void viewAndUpdateProfile(const string& userID);
 
 void manageProfileInterface();
 void manageChatsWithCustomersInterface();
@@ -148,7 +149,7 @@ void generateSalesReportInterface();
 void viewCustomerDemographicsInterface();
 void viewProductPopularityInterface();
 void Logout();
-void myProfileInterface();
+
 void myWalletInterface(); 
 void messagePageInterface();
 void viewProductDetails(int productId);
@@ -313,6 +314,9 @@ void registerUser() {
         cout << left << setw(20) << "Enter Full Name" << setw(2) << ": ";
         getline(cin, newUser.fullName);
 
+        cout << left << setw(20) << "Enter Address" << setw(2) << ": ";
+        getline(cin, newUser.address);
+
         cout << left << setw(20) << "Enter Phone Number" << setw(2) << ": ";
         getline(cin, newUser.phoneNumber);
         newUser.isApproved = false; // Default to not approved
@@ -356,9 +360,9 @@ void registerUser() {
 
         if (proceedWithRegistration) {
             // Insert user into the database
-            string query = "INSERT INTO user (Username, Email, Password, FullName, PhoneNumber, UserRole, isApproved, StoreName) VALUES ('" +
+            string query = "INSERT INTO user (Username, Email, Password, FullName, Address, PhoneNumber, UserRole, isApproved, StoreName) VALUES ('" +
                 newUser.username + "', '" + newUser.email + "', '" + newUser.password + "', '" +
-                newUser.fullName + "', '" + newUser.phoneNumber + "', " +
+                newUser.fullName + "', '" + newUser.address + "', '" + newUser.phoneNumber + "', " +
                 to_string(newUser.UserRole) + ", " + to_string(newUser.isApproved) + ", '" + newUser.storeName + "')";
             if (!executeUpdate(query)) {
                 cout << "Error: " << mysql_error(conn) << endl;
@@ -379,6 +383,7 @@ void registerUser() {
     }
 }
 
+// Sign In Account
 // Sign In Account
 void signInAccount() {
     string username, password;
@@ -418,6 +423,7 @@ void signInAccount() {
                     }
                     else {
                         glbStr = to_string(userID); // Store UserID in global variable
+                        currentUserID = to_string(userID); // Ensure currentUserID is set
                         clearScreen();
                         displayBanner();
                         cout << "================ SIGN IN SUCCESS ================\n";
@@ -538,7 +544,7 @@ void sellerMenu() {
 
         switch (choice) {
         case 1:
-            manageProfileInterface();
+            viewAndUpdateProfile(currentUserID);
             break;
         case 2:
             manageChatsWithCustomersInterface();
@@ -595,7 +601,7 @@ void customerMenu() {
 
         switch (choice) {
         case 1:
-            myProfileInterface();
+            viewAndUpdateProfile(currentUserID);
             break;
         case 2:
             myWalletInterface();
@@ -2301,35 +2307,90 @@ void Logout() {
     }
 }
 
-void myProfileInterface() {
-    int choice;
-    while (true) {
-        clearScreen();
-        displayBanner();
-        cout << "==================== MY PROFILE ====================\n";
-        cout << "| [1] View Profile                                  |\n";
-        cout << "| [2] Edit Profile                                  |\n";
-        cout << "| [3] Back to Customer Menu                         |\n";
-        cout << "=====================================================\n";
-        cout << "Select an option: ";
-        cin >> choice;
+void viewAndUpdateProfile(const string& userID) {
+    clearScreen();
+    string query = "SELECT Username, Email, FullName, PhoneNumber FROM user WHERE UserID = " + userID;
+    MYSQL_RES* res = executeSelectQuery(query);
 
-        switch (choice) {
-        case 1:
-            viewProfile();
-            break;
-        case 2:
-            editProfile();
-            break;
-        case 3:
-            return; // Back to Customer Menu
-        default:
-            cout << "Invalid option. Please try again.\n";
-            break;
+    if (res) {
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (row) {
+            cout << "========== PROFILE DETAILS ==========\n";
+            cout << "Username: " << row[0] << endl;
+            cout << "Email: " << row[1] << endl;
+            cout << "Full Name: " << row[2] << endl;
+            cout << "Phone Number: " << row[3] << endl;
         }
-        cin.ignore();
-        cin.get();
+        else {
+            cout << "No profile found for the provided UserID.\n";
+            mysql_free_result(res);
+            return;
+        }
+        mysql_free_result(res);
     }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+        return;
+    }
+
+    cout << "\nDo you want to update your profile? (y/n): ";
+    char updateChoice;
+    cin >> updateChoice;
+
+    if (tolower(updateChoice) == 'y') {
+        cout << "========== UPDATE PROFILE ==========\n";
+
+        string email, fullName, phoneNumber;
+
+        cout << "Enter new Email: ";
+        cin.ignore();
+        getline(cin, email);
+
+        cout << "Enter new Full Name: ";
+        getline(cin, fullName);
+
+        cout << "Enter new Phone Number: ";
+        getline(cin, phoneNumber);
+
+        string query = "UPDATE user SET Email = '" + email + "', FullName = '" + fullName + "', PhoneNumber = '" + phoneNumber + "' WHERE UserID = " + userID;
+        if (!executeUpdate(query)) {
+            cout << "Error: " << mysql_error(conn) << endl;
+        }
+        else {
+            cout << "Profile updated successfully!\n";
+        }
+
+        string addressLine1, addressLine2, city, state, postalCode, country;
+
+        cout << "Enter new Address Line 1: ";
+        getline(cin, addressLine1);
+
+        cout << "Enter new Address Line 2 (or leave blank): ";
+        getline(cin, addressLine2);
+
+        cout << "Enter new City: ";
+        getline(cin, city);
+
+        cout << "Enter new State: ";
+        getline(cin, state);
+
+        cout << "Enter new Postal Code: ";
+        getline(cin, postalCode);
+
+        cout << "Enter new Country: ";
+        getline(cin, country);
+
+        query = "UPDATE address SET AddressLine1 = '" + addressLine1 + "', AddressLine2 = '" + addressLine2 + "', City = '" + city + "', State = '" + state + "', PostalCode = '" + postalCode + "', Country = '" + country + "' WHERE UserID = " + userID;
+        if (!executeUpdate(query)) {
+            cout << "Error: " << mysql_error(conn) << endl;
+        }
+        else {
+            cout << "Address updated successfully!\n";
+        }
+    }
+
+    cout << "\nPress Enter to continue...";
+    cin.ignore();
 }
 
 void viewProfile() {
@@ -2684,9 +2745,14 @@ void checkoutInterface() {
         cout << "Proceeding to checkout..." << endl;
         // Generate a new order and save to the database
         string query = "INSERT INTO orders (UserID, TotalAmount, Status, OrderDate) VALUES (" + currentUserID + ", " + to_string(totalAmount) + ", 'Pending', NOW())";
-        
+
         if (executeUpdate(query)) {
-            
+            // Retrieve the last inserted order ID
+            query = "SELECT LAST_INSERT_ID()";
+            MYSQL_RES* res = executeSelectQuery(query);
+            MYSQL_ROW row = mysql_fetch_row(res);
+            int orderId = stoi(row[0]);
+            mysql_free_result(res);
 
             for (const auto& item : cart) {
                 string itemQuery = "INSERT INTO order_items (OrderID, ProductID, Quantity, UnitPrice) VALUES (" + to_string(orderId) + ", " + to_string(item.productId) + ", " + to_string(item.quantity) + ", " + to_string(item.unitPrice) + ")";
@@ -2698,13 +2764,12 @@ void checkoutInterface() {
             totalAmount = 0;
 
             cout << "Order placed successfully! Your order ID is " << orderId << "." << endl;
+            cout << "Proceed to Payment Transaction" << endl;
+            paymentTransaction(orderId);
         }
         else {
             cout << "Error placing order: " << mysql_error(conn) << endl;
         }
-
-        cout << "Proceed to Payment Transaction" << endl;
-        paymentTransaction(orderId);
 
         cout << "\nPress Enter to return to the Customer Menu...";
         cin.ignore();
