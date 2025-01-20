@@ -2309,17 +2309,22 @@ void Logout() {
 
 void viewAndUpdateProfile(const string& userID) {
     clearScreen();
-    string query = "SELECT Username, Email, FullName, PhoneNumber FROM user WHERE UserID = " + userID;
+    string query = "SELECT Username, Email, FullName, Address, PhoneNumber FROM user WHERE UserID = " + userID;
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
         MYSQL_ROW row = mysql_fetch_row(res);
         if (row) {
-            cout << "========== PROFILE DETAILS ==========\n";
-            cout << "Username: " << row[0] << endl;
-            cout << "Email: " << row[1] << endl;
-            cout << "Full Name: " << row[2] << endl;
-            cout << "Phone Number: " << row[3] << endl;
+            // Display profile details with an improved look
+            cout << "=============================================================\n";
+            cout << "|                         PROFILE DETAILS                    |\n";
+            cout << "=============================================================\n";
+            cout << "| Username       : " << left << setw(40) << row[0] << "|\n";
+            cout << "| Email          : " << left << setw(40) << row[1] << "|\n";
+            cout << "| Full Name      : " << left << setw(40) << row[2] << "|\n";
+            cout << "| Address        : " << left << setw(40) << row[3] << "|\n";
+            cout << "| Phone Number   : " << left << setw(40) << row[4] << "|\n";
+            cout << "=============================================================\n";
         }
         else {
             cout << "No profile found for the provided UserID.\n";
@@ -2338,54 +2343,31 @@ void viewAndUpdateProfile(const string& userID) {
     cin >> updateChoice;
 
     if (tolower(updateChoice) == 'y') {
-        cout << "========== UPDATE PROFILE ==========\n";
+        cout << "=============================================================\n";
+        cout << "|                      UPDATE PROFILE                        |\n";
+        cout << "=============================================================\n";
 
-        string email, fullName, phoneNumber;
+        string email, fullName, address, phoneNumber;
 
-        cout << "Enter new Email: ";
-        cin.ignore();
+        cout << "| Enter new Email        : ";
+        cin.ignore(); // To ignore any leftover newline character from previous input
         getline(cin, email);
 
-        cout << "Enter new Full Name: ";
+        cout << "| Enter new Full Name    : ";
         getline(cin, fullName);
 
-        cout << "Enter new Phone Number: ";
+        cout << "| Enter new Address      : ";
+        getline(cin, address);
+
+        cout << "| Enter new Phone Number : ";
         getline(cin, phoneNumber);
 
-        string query = "UPDATE user SET Email = '" + email + "', FullName = '" + fullName + "', PhoneNumber = '" + phoneNumber + "' WHERE UserID = " + userID;
+        string query = "UPDATE user SET Email = '" + email + "', FullName = '" + fullName + "', Address = '" + address + "', PhoneNumber = '" + phoneNumber + "' WHERE UserID = " + userID;
         if (!executeUpdate(query)) {
             cout << "Error: " << mysql_error(conn) << endl;
         }
         else {
             cout << "Profile updated successfully!\n";
-        }
-
-        string addressLine1, addressLine2, city, state, postalCode, country;
-
-        cout << "Enter new Address Line 1: ";
-        getline(cin, addressLine1);
-
-        cout << "Enter new Address Line 2 (or leave blank): ";
-        getline(cin, addressLine2);
-
-        cout << "Enter new City: ";
-        getline(cin, city);
-
-        cout << "Enter new State: ";
-        getline(cin, state);
-
-        cout << "Enter new Postal Code: ";
-        getline(cin, postalCode);
-
-        cout << "Enter new Country: ";
-        getline(cin, country);
-
-        query = "UPDATE address SET AddressLine1 = '" + addressLine1 + "', AddressLine2 = '" + addressLine2 + "', City = '" + city + "', State = '" + state + "', PostalCode = '" + postalCode + "', Country = '" + country + "' WHERE UserID = " + userID;
-        if (!executeUpdate(query)) {
-            cout << "Error: " << mysql_error(conn) << endl;
-        }
-        else {
-            cout << "Address updated successfully!\n";
         }
     }
 
