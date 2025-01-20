@@ -8,6 +8,7 @@
 #include <algorithm> // For transform
 #include <fstream> // Include for file operations
 #include <cstdlib> // For system()
+#include <set> // Include set for displayedSellers
 
 using namespace std;
 
@@ -122,6 +123,7 @@ void exportSalesDataToCSV();
 void generateHTMLReport();
 void generateHTMLReportInterface();
 void eWalletManagement();
+void createEWalletAccount();
 void topUpWallet();
 void updateOrderStatus(const string& orderID, const string& newStatusID);
 void viewOrderStatus(const string& userID);
@@ -162,6 +164,9 @@ void editProfile();
 void listSellers();
 void myOrderInterface();
 void viewOrderHistoryInterface();
+
+void startNewMessage();
+void selectMessage();
 
 void viewMessages(int userID1, int userID2);
 void sendMessage(int senderID, int receiverID, const std::string& messageText);
@@ -625,7 +630,8 @@ void customerMenu() {
             viewOrderHistoryInterface();
             break;
         case 9:
-            return; // Return to main menu
+            Logout(); // Return to main menu
+            break;
         default:
             cout << "Invalid option. Please try again.\n";
             break;
@@ -1781,26 +1787,22 @@ void manageChatsWithCustomers() {
 void viewMessages(int userID1, int userID2) {
     std::string query = "SELECT SenderID, MessageText, Timestamp FROM messages WHERE (SenderID = " + std::to_string(userID1) + " AND ReceiverID = " + std::to_string(userID2) + ") OR (SenderID = " + std::to_string(userID2) + " AND ReceiverID = " + std::to_string(userID1) + ") ORDER BY Timestamp";
 
-    // Execute the query
     if (mysql_query(conn, query.c_str())) {
         std::cerr << "Error: " << mysql_error(conn) << std::endl;
         return;
     }
 
-    // Store the result set
     MYSQL_RES* res = mysql_store_result(conn);
     if (!res) {
         std::cerr << "Error: " << mysql_error(conn) << std::endl;
         return;
     }
 
-    // Process the result set
     MYSQL_ROW row;
     while ((row = mysql_fetch_row(res))) {
-        std::cout << (atoi(row[0]) == userID1 ? "You: " : "Them: ") << row[1] << " [" << row[2] << "]\n";
+        std::cout << (atoi(row[0]) == userID1 ? "You: " : "Seller: ") << row[1] << " [" << row[2] << "]\n";
     }
 
-    // Free the result set
     mysql_free_result(res);
 }
 
@@ -1808,7 +1810,6 @@ void sendMessage(int senderID, int receiverID, const std::string& messageText) {
     std::string query = "INSERT INTO messages (SenderID, ReceiverID, MessageText) VALUES (" +
         std::to_string(senderID) + ", " + std::to_string(receiverID) + ", '" + messageText + "')";
 
-    // Execute the query
     if (mysql_query(conn, query.c_str())) {
         std::cerr << "Error: " << mysql_error(conn) << std::endl;
     }
@@ -2347,11 +2348,18 @@ void viewAndUpdateProfile(const string& userID) {
         cout << "|                      UPDATE PROFILE                        |\n";
         cout << "=============================================================\n";
 
-        string email, fullName, address, phoneNumber;
+        string username, email, password, fullName, address, phoneNumber;
+
+        cout << "| Enter new Username     : ";
+        cin.ignore(); // To ignore any leftover newline character from previous input
+        getline(cin, username);
 
         cout << "| Enter new Email        : ";
-        cin.ignore(); // To ignore any leftover newline character from previous input
         getline(cin, email);
+
+        cout << "| Enter new Password     : ";
+        getline(cin, password);
+        password = bcrypt::generateHash(password); // Hash the password
 
         cout << "| Enter new Full Name    : ";
         getline(cin, fullName);
@@ -2362,7 +2370,7 @@ void viewAndUpdateProfile(const string& userID) {
         cout << "| Enter new Phone Number : ";
         getline(cin, phoneNumber);
 
-        string query = "UPDATE user SET Email = '" + email + "', FullName = '" + fullName + "', Address = '" + address + "', PhoneNumber = '" + phoneNumber + "' WHERE UserID = " + userID;
+        string query = "UPDATE user SET Username = '" + username + "', Email = '" + email + "', Password = '" + password + "', FullName = '" + fullName + "', Address = '" + address + "', PhoneNumber = '" + phoneNumber + "' WHERE UserID = " + userID;
         if (!executeUpdate(query)) {
             cout << "Error: " << mysql_error(conn) << endl;
         }
@@ -2373,6 +2381,7 @@ void viewAndUpdateProfile(const string& userID) {
 
     cout << "\nPress Enter to continue...";
     cin.ignore();
+    cin.get();
 }
 
 void viewProfile() {
@@ -2457,21 +2466,25 @@ void myWalletInterface() {
         clearScreen();
         displayBanner();
         cout << "==================== MY WALLET ====================\n";
-        cout << "| [1] View Wallet Balance                           |\n";
-        cout << "| [2] Top-Up Wallet                                 |\n";
-        cout << "| [3] Back to Customer Menu                         |\n";
+        cout << "| [1] Create E-Wallet Account                      |\n";
+        cout << "| [2] Top-Up Wallet                                |\n";
+        cout << "| [3] View Wallet Balance                          |\n";
+        cout << "| [4] Back to Customer Menu                        |\n";
         cout << "=====================================================\n";
         cout << "Select an option: ";
         cin >> choice;
 
         switch (choice) {
         case 1:
-            viewWalletBalance();
+            createEWalletAccount();
             break;
         case 2:
             topUpWallet();
             break;
         case 3:
+            viewWalletBalance();
+            break;
+        case 4:
             return; // Back to Customer Menu
         default:
             cout << "Invalid option. Please try again.\n";
@@ -2492,10 +2505,10 @@ void viewWalletBalance() {
     if (res) {
         MYSQL_ROW row = mysql_fetch_row(res);
         if (row) {
-            cout << "Wallet Balance: $" << fixed << setprecision(2) << stod(row[0]) << endl;
+            cout << "| Wallet Balance: $" << fixed << setprecision(2) << stod(row[0]) << endl;
         }
         else {
-            cout << "Wallet not found." << endl;
+            cout << "| Wallet not found." << endl;
         }
         mysql_free_result(res);
     }
@@ -2509,12 +2522,36 @@ void viewWalletBalance() {
     cin.get();
 }
 
+void createEWalletAccount() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== CREATE E-WALLET ACCOUNT ====================\n";
+
+    string initialBalance;
+    cout << "| Enter initial balance: $";
+    cin.ignore();
+    getline(cin, initialBalance);
+
+    string query = "INSERT INTO wallet (UserID, Balance) VALUES (" + currentUserID + ", " + initialBalance + ")";
+    if (executeUpdate(query)) {
+        cout << "E-Wallet account created successfully with an initial balance of $" << initialBalance << "!\n";
+    }
+    else {
+        cout << "Error creating E-Wallet account: " << mysql_error(conn) << endl;
+    }
+
+    cout << "===============================================================\n";
+    cout << "\nPress Enter to return to the My Wallet Menu...";
+    cin.ignore();
+    cin.get();
+}
+
 void topUpWallet() {
     clearScreen();
     displayBanner();
     cout << "==================== TOP-UP WALLET ====================\n";
     double amount;
-    cout << "Enter amount to top-up: $";
+    cout << "| Enter amount to top-up: $";
     cin >> amount;
 
     if (amount <= 0) {
@@ -2523,7 +2560,7 @@ void topUpWallet() {
     else {
         string query = "UPDATE wallet SET Balance = Balance + " + to_string(amount) + " WHERE UserID = " + currentUserID;
         if (executeUpdate(query)) {
-            cout << "Wallet topped up successfully!" << endl;
+            cout << "Wallet topped up successfully! New balance will be reflected soon." << endl;
         }
         else {
             cout << "Error topping up wallet: " << mysql_error(conn) << endl;
@@ -2534,38 +2571,203 @@ void topUpWallet() {
     cout << "\nPress Enter to return to the My Wallet Menu...";
     cin.ignore();
     cin.get();
-}
+}   
 
 void messagePageInterface() {
-    while (true) {
-        clearScreen();
-        displayBanner();
-        cout << "==================== MESSAGE PAGE ====================\n";
-        listSellers(); // Function to list all sellers
+    clearScreen();
+    displayBanner();
 
-        int sellerID;
-        cout << "\nEnter Seller ID to view messages (or 0 to go back): ";
-        cin >> sellerID;
+    // Query to get the messages for the current user
+    string query = "SELECT u.UserID, u.StoreName, m.SenderID, m.ReceiverID, m.MessageText, m.Timestamp "
+        "FROM messages m "
+        "INNER JOIN user u ON (m.SenderID = u.UserID OR m.ReceiverID = u.UserID) "
+        "WHERE m.SenderID = " + currentUserID + " OR m.ReceiverID = " + currentUserID + " "
+        "ORDER BY m.Timestamp DESC";
+    MYSQL_RES* res = executeSelectQuery(query);
 
-        if (sellerID == 0) {
-            return; // Back to Customer Menu
+    if (res) {
+        MYSQL_ROW row;
+        if (mysql_num_rows(res) == 0) {
+            // No messages found
+            cout << "=============================================================\n";
+            cout << "|                         MESSAGES                           |\n";
+            cout << "=============================================================\n";
+            cout << "\nTHERE'S NO MESSAGES, WOULD YOU LIKE TO START A NEW ONE?\n";
+            cout << "=============================================================\n";
+            cout << "[1] START A NEW MESSAGE\n";
+            cout << "[2] RETURN BACK\n";
+            cout << "\nYOUR OPTION: ";
+
+            int option;
+            cin >> option;
+            if (option == 1) {
+                startNewMessage();
+            }
+            else {
+                return;
+            }
+        }
+        else {
+            // Messages found
+            cout << "=============================================================\n";
+            cout << "|                         MESSAGES                           |\n";
+            cout << "=============================================================\n";
+
+            set<int> displayedSellers;
+
+            while ((row = mysql_fetch_row(res))) {
+                int sellerID = stoi(row[0]);
+                string storeName = (row[1] && strlen(row[1]) > 0) ? row[1] : "Unknown Store";
+
+                // Only display the latest message from each seller
+                if (displayedSellers.find(sellerID) == displayedSellers.end()) {
+                    cout << "- [" << storeName << "]  [" << sellerID << "]\n";
+                    if (stoi(row[2]) == stoi(currentUserID)) {
+                        cout << "You: " << row[4] << " [" << row[5] << "]\n\n";
+                    }
+                    else {
+                        cout << "Seller: " << row[4] << " [" << row[5] << "]\n\n";
+                    }
+                    displayedSellers.insert(sellerID);
+                }
+            }
+
+            cout << "=============================================================\n";
+            cout << "[1] START A NEW MESSAGE\n";
+            cout << "[2] SELECT YOUR MESSAGE\n";
+            cout << "[3] RETURN BACK\n";
+            cout << "\nYOUR OPTION: ";
+
+            int option;
+            cin >> option;
+            if (option == 1) {
+                startNewMessage();
+            }
+            else if (option == 2) {
+                selectMessage();
+            }
+            else {
+                return;
+            }
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "\nPress Enter to return to the Message Page...";
+    cin.ignore();
+    cin.get();
+}
+
+void startNewMessage() {
+    // Logic to start a new message
+    clearScreen();
+    displayBanner();
+
+    // Query to get the list of sellers
+    string query = "SELECT UserID, StoreName FROM user WHERE UserRole = 1 AND isApproved = 1";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << "=============================================================\n";
+        cout << "|                         SELLERS                            |\n";
+        cout << "=============================================================\n";
+
+        while ((row = mysql_fetch_row(res))) {
+            int sellerID = stoi(row[0]);
+            string storeName = row[1] ? row[1] : "Unknown Store";
+            cout << "- [" << storeName << "]  [" << sellerID << "]\n";
         }
 
-        // Display chat history
-        viewMessages(stoi(glbStr), sellerID);
-
-        string reply;
-        cout << "Enter your message: ";
-        cin.ignore(); // Clear the newline character from the input buffer
-        getline(cin, reply);
-
-        sendMessage(stoi(glbStr), sellerID, reply); // Send message from customer to seller
-        viewMessages(stoi(glbStr), sellerID); // View updated chat history with the seller
-
-        cout << "\nPress Enter to return to the Message Page...";
-        cin.ignore();
-        cin.get();
+        mysql_free_result(res);
     }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+        return;
+    }
+
+    cout << "=============================================================\n";
+    cout << "Enter Seller ID to start a new message: ";
+    int sellerID;
+    cin >> sellerID;
+    cin.ignore(); // Clear the newline character from the input buffer
+
+    cout << "\n=============================================================\n";
+    cout << "|                         NEW MESSAGE                        |\n";
+    cout << "=============================================================\n";
+    string message;
+    cout << "Enter your message: ";
+    getline(cin, message);
+
+    sendMessage(stoi(currentUserID), sellerID, message); // Send message from customer to seller
+
+    cout << "\n=============================================================\n";
+    cout << "Message sent successfully!\n";
+    cout << "=============================================================\n";
+
+    viewMessages(stoi(currentUserID), sellerID); // View updated chat history with the seller
+
+    cout << "\nPress Enter to return to the Message Page...";
+    cin.ignore(); // This line is now unnecessary since cin.ignore() was called earlier
+    cin.get();
+}
+
+void selectMessage() {
+    // Logic to select and view existing messages
+    clearScreen();
+    displayBanner();
+
+    // Query to get the list of sellers
+    string query = "SELECT UserID, StoreName FROM user WHERE UserRole = 1 AND isApproved = 1";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << "=============================================================\n";
+        cout << "|                         SELLERS                            |\n";
+        cout << "=============================================================\n";
+
+        while ((row = mysql_fetch_row(res))) {
+            int sellerID = stoi(row[0]);
+            string storeName = row[1] ? row[1] : "Unknown Store";
+            cout << "- [" << storeName << "]  [" << sellerID << "]\n";
+        }
+
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+        return;
+    }
+
+    cout << "=============================================================\n";
+    cout << "Enter Seller ID to view messages: ";
+    int sellerID;
+    cin >> sellerID;
+    cin.ignore(); // Clear the newline character from the input buffer
+
+    viewMessages(stoi(currentUserID), sellerID); // Display chat history with the selected seller
+
+    cout << "\n=============================================================\n";
+    cout << "|                         REPLY                              |\n";
+    cout << "=============================================================\n";
+    string reply;
+    cout << "Enter your reply: ";
+    getline(cin, reply);
+
+    sendMessage(stoi(currentUserID), sellerID, reply); // Send message from customer to seller
+    viewMessages(stoi(currentUserID), sellerID); // View updated chat history with the seller
+
+    cout << "\n=============================================================\n";
+    cout << "Message sent successfully!\n";
+    cout << "=============================================================\n";
+
+    cout << "\nPress Enter to return to the Message Page...";
+    cin.ignore();
+    cin.get();
 }
 
 void browseProductsInterface() {
