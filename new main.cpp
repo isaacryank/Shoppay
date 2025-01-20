@@ -145,7 +145,6 @@ void manageProfileInterface();
 void manageChatsWithCustomersInterface();
 void sellerMessagePageInterface();
 void approveCustomerOrdersInterface();
-void viewWalletBalanceInterface();
 void viewSalesReportsInterface();
 void viewTransactionHistoryInterface();
 void sellerSalesReportInterface();
@@ -157,6 +156,7 @@ void listCustomers();
 void Logout();
 
 void myWalletInterface(); 
+void sellerWalletInterface();
 void messagePageInterface();
 void viewProductDetails(int productId);
 void myCartInterface();
@@ -541,9 +541,9 @@ void sellerMenu() {
         cout << "==================== SELLER MENU ====================\n";
         cout << "| [1] My Profile                                    |\n";
         cout << "| [2] View Messages                                 |\n";
-        cout << "| [3] Manage Products                               |\n";
-        cout << "| [4] Approve Customer Orders                       |\n";
-        cout << "| [5] Wallet Balance                                |\n";
+        cout << "| [3] My Wallet                                     |\n";
+        cout << "| [4] Manage Products                               |\n";
+        cout << "| [5] Approve Customer Orders                       |\n";
         cout << "| [6] Sales Reports                                 |\n";
         cout << "| [7] Transaction History                           |\n";
         cout << "| [8] Seller Sales Report                           |\n";
@@ -560,13 +560,13 @@ void sellerMenu() {
             sellerMessagePageInterface();
             break;
         case 3:
-            sellermanageProducts();
+            sellerWalletInterface();
             break;
         case 4:
-            approveCustomerOrdersInterface();
+            sellermanageProducts();
             break;
         case 5:
-            viewWalletBalanceInterface();
+            approveCustomerOrdersInterface();
             break;
         case 6:
             viewSalesReportsInterface();
@@ -2309,20 +2309,6 @@ void approveCustomerOrdersInterface() {
     }
 }
 
-void viewWalletBalanceInterface() {
-    while (true) {
-        clearScreen();
-        displayBanner();
-        cout << "=================== VIEW WALLET BALANCE ==================\n";
-        viewWalletBalance();
-        cout << "==========================================================\n";
-        cout << "\nPress Enter to return to the Seller Menu...";
-        cin.ignore();
-        cin.get();
-        return; // Back to Seller Menu
-    }
-}
-
 void sellerSalesReportInterface() {
     while (true) {
         clearScreen();
@@ -2696,7 +2682,7 @@ void myWalletInterface() {
         cout << "| [2] Top-Up Wallet                                |\n";
         cout << "| [3] View Wallet Balance                          |\n";
         cout << "| [4] Back to Customer Menu                        |\n";
-        cout << "=====================================================\n";
+        cout << "====================================================\n";
         cout << "Select an option: ";
         cin >> choice;
 
@@ -2747,6 +2733,42 @@ void viewWalletBalance() {
     cin.ignore();
     cin.get();
 }
+
+void sellerWalletInterface() {
+    int choice;
+    while (true) {
+        clearScreen();
+        displayBanner();
+        cout << "==================== MY WALLET ====================\n";
+        cout << "| [1] Create E-Wallet Account                      |\n";
+        cout << "| [2] Top-Up Wallet                                |\n";
+        cout << "| [3] View Wallet Balance                          |\n";
+        cout << "| [4] Back to Seller Menu                          |\n";
+        cout << "=====================================================\n";
+        cout << "Select an option: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1:
+            createEWalletAccount();
+            break;
+        case 2:
+            topUpWallet();
+            break;
+        case 3:
+            viewWalletBalance();
+            break;
+        case 4:
+            return; // Back to Seller Menu
+        default:
+            cout << "Invalid option. Please try again.\n";
+            break;
+        }
+        cin.ignore();
+        cin.get();
+    }
+}
+
 
 void createEWalletAccount() {
     clearScreen();
