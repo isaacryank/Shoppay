@@ -1828,12 +1828,8 @@ void viewTransactionHistory() {
     cin.get();
 }
 
-void viewReceipt() {
+void viewReceipt(int orderID) {
     clearScreen();
-    int orderID;
-    cout << "Enter Order ID to view receipt: ";
-    cin >> orderID;
-
     string query = "SELECT OrderID, UserID, TotalAmount, StatusID, OrderDate FROM orders WHERE OrderID = " + to_string(orderID);
     MYSQL_RES* res = executeSelectQuery(query);
 
@@ -3860,54 +3856,6 @@ void listSellers() {
     cin.get();
 }
 
-void myOrderInterface() {
-    clearScreen();
-    displayBanner();
-    cout << "==================== MY ORDERS ====================\n";
-
-    string query = "SELECT OrderID, TotalAmount, OrderStatus, OrderDate FROM orders WHERE UserID = " + currentUserID;
-    MYSQL_RES* res = executeSelectQuery(query);
-
-    if (res) {
-        MYSQL_ROW row;
-        cout << left << setw(10) << "Order ID" << setw(20) << "Total Amount" << setw(20) << "Status" << setw(20) << "Order Date" << endl;
-        cout << string(70, '-') << endl;
-
-        while ((row = mysql_fetch_row(res))) {
-            cout << left << setw(10) << row[0] << setw(20) << fixed << setprecision(2) << stod(row[1]) << setw(20) << row[2] << setw(20) << row[3] << endl;
-        }
-        mysql_free_result(res);
-    }
-    else {
-        cout << "Error: " << mysql_error(conn) << endl;
-    }
-
-    cout << "========================================================\n";
-    cout << "| [1] Handle Pending Orders                             |\n";
-    cout << "| [2] Back to Customer Menu                             |\n";
-    cout << "========================================================\n";
-    cout << "Select an option: ";
-
-    int option;
-    cin >> option;
-
-    switch (option) {
-    case 1:
-        handlePendingOrders(); // New function to handle pending orders
-        break;
-    case 2:
-        // Back to Customer Menu
-        return;
-    default:
-        cout << "Invalid option. Please try again." << endl;
-        break;
-    }
-
-    cout << "\nPress Enter to return to the My Orders Menu...";
-    cin.ignore();
-    cin.get();
-}
-
 // New function definition for seller profile update
 void viewAndUpdateSellerProfile(const string& sellerID) {
     clearScreen();
@@ -4167,7 +4115,7 @@ void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTota
     cout << "==================== CHECKOUT ====================\n";
 
     // Fetch details of selected items from the cart
-    string query = "SELECT c.ProductID, p.ProductName, u.StoreName, c.Quantity, c.TotalPrice / c.Quantity AS UnitPrice "
+    string query = "SELECT c.ProductID, p.ProductName, u.StoreName, c.Quantity, p.Price AS UnitPrice "
         "FROM cart c INNER JOIN product p ON c.ProductID = p.ProductID "
         "INNER JOIN user u ON p.SellerID = u.UserID "
         "WHERE c.UserID = " + currentUserID + " AND c.ProductID IN (";
@@ -4187,6 +4135,11 @@ void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTota
         cout << string(90, '-') << endl;
 
         while ((row = mysql_fetch_row(res))) {
+            if (row == nullptr) {
+                cerr << "Error: Null row fetched from database.\n";
+                continue;
+            }
+
             int productID = stoi(row[0]);
             string productName = row[1];
             string storeName = row[2];
@@ -4201,6 +4154,23 @@ void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTota
 
         cout << string(90, '=') << endl;
         cout << "Total Amount: $" << fixed << setprecision(2) << selectedTotalAmount << endl;
+
+        // Fetch wallet balance
+        string balanceQuery = "SELECT Balance FROM wallet WHERE UserID = " + currentUserID;
+        MYSQL_RES* balanceRes = executeSelectQuery(balanceQuery);
+        double walletBalance = 0.0;
+        if (balanceRes) {
+            MYSQL_ROW balanceRow = mysql_fetch_row(balanceRes);
+            if (balanceRow) {
+                walletBalance = stod(balanceRow[0]);
+            }
+            mysql_free_result(balanceRes);
+        }
+        else {
+            cerr << "Error: " << mysql_error(conn) << endl;
+        }
+        cout << "Current Wallet Balance: $" << fixed << setprecision(2) << walletBalance << endl;
+
         cout << "\n[1] Proceed with Payment\n";
         cout << "[2] Cancel\n";
         cout << "Select an option: ";
@@ -4211,7 +4181,7 @@ void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTota
             // Generate a new order and proceed to payment
             int orderId = generateOrder(selectedItems, selectedTotalAmount);
             if (orderId > 0) {
-                paymentTransaction(orderId, selectedTotalAmount);
+                paymentTransaction(orderId, selectedTotalAmount, walletBalance);
             }
         }
         else {
@@ -4219,7 +4189,12 @@ void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTota
         }
     }
     else {
-        cout << "Error fetching selected items: " << mysql_error(conn) << endl;
+        if (res == nullptr) {
+            cerr << "Error: " << mysql_error(conn) << endl;
+        }
+        else if (mysql_num_rows(res) == 0) {
+            cerr << "Error: No rows fetched from database.\n";
+        }
     }
 
     cout << "\nPress Enter to return to the Customer Menu...";
@@ -4227,52 +4202,63 @@ void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTota
     cin.get();
 }
 
-void paymentTransaction(int orderId, double orderTotalAmount) {
+void paymentTransaction(int orderId, double orderTotalAmount, double walletBalance) {
     clearScreen();
     displayBanner();
     cout << "==================== PAYMENT TRANSACTION ====================\n";
 
-    string query = "SELECT Balance FROM wallet WHERE UserID = " + currentUserID;
-    MYSQL_RES* res = executeSelectQuery(query);
+    cout << "Wallet Balance: $" << fixed << setprecision(2) << walletBalance << endl;
+    cout << "Order Total: $" << fixed << setprecision(2) << orderTotalAmount << endl;
 
-    if (res) {
-        MYSQL_ROW row = mysql_fetch_row(res);
-        if (row) {
-            double walletBalance = stod(row[0]);
-            cout << "Wallet Balance: $" << fixed << setprecision(2) << walletBalance << endl;
-            cout << "Order Total: $" << fixed << setprecision(2) << orderTotalAmount << endl;
-
-            if (walletBalance >= orderTotalAmount) {
-                cout << "Confirm payment? (yes/no): ";
-                string confirm;
-                cin >> confirm;
-                if (confirm == "yes") {
-                    // Deduct amount from wallet and update order status
-                    string updateWallet = "UPDATE wallet SET Balance = Balance - " + to_string(orderTotalAmount) + " WHERE UserID = " + currentUserID;
-                    executeUpdate(updateWallet);
-
-                    string updateOrder = "UPDATE orders SET StatusID = 2 WHERE OrderID = " + to_string(orderId); // StatusID 2 for 'Completed'
-                    executeUpdate(updateOrder);
-
-                    cout << "Payment successful! Order completed." << endl;
-                }
-                else {
-                    cout << "Payment cancelled." << endl;
-                }
+    if (walletBalance >= orderTotalAmount) {
+        cout << "Confirm payment? (yes/no): ";
+        string confirm;
+        cin >> confirm;
+        if (confirm == "yes") {
+            // Deduct amount from wallet and update order status
+            string updateWallet = "UPDATE wallet SET Balance = Balance - " + to_string(orderTotalAmount) + " WHERE UserID = " + currentUserID;
+            if (!executeUpdate(updateWallet)) {
+                cerr << "Error updating wallet balance: " << mysql_error(conn) << endl;
+                return;
             }
-            else {
-                cout << "Insufficient wallet balance. Redirecting to 'My Order' to complete the payment later." << endl;
-                string updateOrder = "UPDATE orders SET StatusID = 3 WHERE OrderID = " + to_string(orderId); // StatusID 3 for 'Pending Payment'
-                executeUpdate(updateOrder);
+
+            string updateOrder = "UPDATE orders SET StatusID = 2 WHERE OrderID = " + to_string(orderId); // StatusID 2 for 'Completed'
+            if (!executeUpdate(updateOrder)) {
+                cerr << "Error updating order status: " << mysql_error(conn) << endl;
+                return;
+            }
+
+            cout << "Payment successful! Order completed." << endl;
+
+            // Ask the user if they want to view the receipt or return to the menu
+            cout << "[1] View Receipt\n";
+            cout << "[2] MyOrder\n";
+            cout << "[3] Return to Menu\n";
+            cout << "Select an option: ";
+            int option;
+            cin >> option;
+
+            if (option == 1) {
+                viewReceipt(orderId);
+            }
+            else if (option == 2) {
+                myOrderInterface();
             }
         }
         else {
-            cout << "Wallet not found." << endl;
+            cout << "Payment cancelled." << endl;
         }
-        mysql_free_result(res);
     }
     else {
-        cout << "Error: " << mysql_error(conn) << endl;
+        cout << "Payment failed: Your balance is not enough." << endl;
+        cout << "Item will be saved in [7] My Order." << endl;
+
+        // Update order status to 'Pending Payment'
+        string updateOrder = "UPDATE orders SET StatusID = 3 WHERE OrderID = " + to_string(orderId); // StatusID 3 for 'Pending Payment'
+        if (!executeUpdate(updateOrder)) {
+            cerr << "Error updating order status: " << mysql_error(conn) << endl;
+            return;
+        }
     }
 
     cout << "\nPress Enter to return to the Customer Menu...";
@@ -4285,7 +4271,7 @@ void handlePendingOrders() {
     displayBanner();
     cout << "==================== PENDING ORDERS ====================\n";
 
-    string query = "SELECT OrderID, TotalAmount, OrderStatus FROM orders WHERE UserID = " + currentUserID + " AND OrderStatus = 'Pending'";
+    string query = "SELECT OrderID, TotalAmount, StatusID FROM orders WHERE UserID = " + currentUserID + " AND StatusID = 3"; // StatusID 3 for 'Pending Payment'
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
@@ -4298,7 +4284,7 @@ void handlePendingOrders() {
             cout << string(50, '-') << endl;
 
             while ((row = mysql_fetch_row(res))) {
-                cout << left << setw(10) << row[0] << setw(20) << fixed << setprecision(2) << stod(row[1]) << setw(20) << row[2] << endl;
+                cout << left << setw(10) << row[0] << setw(20) << fixed << setprecision(2) << stod(row[1]) << setw(20) << "Pending Payment" << endl;
             }
             mysql_free_result(res);
 
@@ -4328,6 +4314,56 @@ void handlePendingOrders() {
     }
 
     cout << "\nPress Enter to return to the Customer Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void myOrderInterface() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== MY ORDERS ====================\n";
+
+    string query = "SELECT OrderID, TotalAmount, StatusID, OrderDate FROM orders WHERE UserID = " + currentUserID;
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Order ID" << setw(20) << "Total Amount" << setw(20) << "Status" << setw(20) << "Order Date" << endl;
+        cout << string(70, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            int statusID = stoi(row[2]);
+            string status = (statusID == 2) ? "Completed" : (statusID == 3) ? "Pending Payment" : "Pending Approval";
+            cout << left << setw(10) << row[0] << setw(20) << fixed << setprecision(2) << stod(row[1]) << setw(20) << status << setw(20) << row[3] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "========================================================\n";
+    cout << "| [1] Handle Pending Orders                             |\n";
+    cout << "| [2] Back to Customer Menu                             |\n";
+    cout << "========================================================\n";
+    cout << "Select an option: ";
+
+    int option;
+    cin >> option;
+
+    switch (option) {
+    case 1:
+        handlePendingOrders(); // New function to handle pending orders
+        break;
+    case 2:
+        // Back to Customer Menu
+        return;
+    default:
+        cout << "Invalid option. Please try again." << endl;
+        break;
+    }
+
+    cout << "\nPress Enter to return to the My Orders Menu...";
     cin.ignore();
     cin.get();
 }
@@ -4480,7 +4516,6 @@ int generateOrder(const vector<int>& selectedItems, double selectedTotalAmount) 
         return -1;
     }
 }
-
 
 int main() {
     connectToDatabase(); // Establish database connection
