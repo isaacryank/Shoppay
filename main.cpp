@@ -184,6 +184,12 @@ void listSellers();
 void myOrderInterface();
 void viewOrderHistoryInterface();
 void viewMyOrders();
+void generateAdminSalesReport();
+void viewAdminCustomerDemographics();
+void viewAdminProductPopularity();
+void viewAdminItemsSoldEachDay();
+void viewAdminAverageOrderValueEachDay();
+void adminSalesReportInterface();
 
 void startNewMessage();
 void selectMessage();
@@ -212,6 +218,8 @@ void createCoupon();
 void deleteCoupon();
 void updateCoupon();
 void viewCoupons();
+void viewItemsSoldEachDayInterface();
+void viewAverageOrderValueEachDayInterface();
 
 int generateOrder(const vector<int>& selectedItems, double selectedTotalAmount);
 string fixedPrice(double value);
@@ -564,7 +572,7 @@ void adminMenu() {
             updateCommissionRateInterface();
             break;
         case 6:
-            viewPlatformSalesReportsInterface();
+            adminSalesReportInterface();
             break;
         case 7:
             generateHTMLReportInterface();
@@ -596,7 +604,8 @@ void sellerMenu() {
       //cout << "| [6] Sales Reports                                 |\n";
       //cout << "| [7] Transaction History                           |\n";
         cout << "| [6] Seller Sales Report                           |\n";
-        cout << "| [7] Logout                                        |\n";
+        cout << "| [7] Generate Sales Graph Report                   |\n";
+        cout << "| [8] Logout                                        |\n";
         cout << "=====================================================\n";
         cout << "Select an option: ";
         cin >> choice;
@@ -627,6 +636,9 @@ void sellerMenu() {
             sellerSalesReportInterface();
             break;
         case 7:
+            generateHTMLReport();  // Call the function to generate the graph report
+            break;
+        case 8:
             Logout(); // Return to main menu
             break;
         default:
@@ -2033,11 +2045,23 @@ void generateHTMLReport() {
     cout << "==================== GENERATING HTML REPORT ====================\n";
 
     // SQL query to get daily sales data
-    string query = "SELECT DATE(OrderDate) as OrderDate, SUM(TotalAmount) as DailySales "
-        "FROM orders WHERE StatusID = 2 GROUP BY DATE(OrderDate)";
-    MYSQL_RES* res = executeSelectQuery(query);
+    string salesQuery = "SELECT DATE(o.OrderDate) as OrderDate, SUM(o.TotalAmount) as DailySales "
+        "FROM orders o "
+        "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "WHERE o.StatusID = 2 AND p.SellerID = " + currentUserID + " "
+        "GROUP BY DATE(o.OrderDate)";
+    MYSQL_RES* salesRes = executeSelectQuery(salesQuery);
 
-    if (res) {
+    // SQL query to get items sold each day
+    string itemsQuery = "SELECT DATE(o.OrderDate) as OrderDate, SUM(oi.Quantity) as ItemsSold "
+        "FROM orders o INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "WHERE o.StatusID = 2 AND p.SellerID = " + currentUserID + " "
+        "GROUP BY DATE(o.OrderDate)";
+    MYSQL_RES* itemsRes = executeSelectQuery(itemsQuery);
+
+    if (salesRes && itemsRes) {
         ofstream file("sales_report.html");
         if (file.is_open()) {
             file << R"(
@@ -2050,16 +2074,18 @@ void generateHTMLReport() {
 <body>
     <h1>Sales Report</h1>
     <canvas id="salesChart" width="800" height="400"></canvas>
+    <canvas id="itemsChart" width="800" height="400"></canvas>
     <script>
-        var ctx = document.getElementById('salesChart').getContext('2d');
-        var salesChart = new Chart(ctx, {
+        var salesCtx = document.getElementById('salesChart').getContext('2d');
+        var itemsCtx = document.getElementById('itemsChart').getContext('2d');
+        var salesChart = new Chart(salesCtx, {
             type: 'line',
             data: {
                 labels: [)";
 
             MYSQL_ROW row;
             bool first = true;
-            while ((row = mysql_fetch_row(res))) {
+            while ((row = mysql_fetch_row(salesRes))) {
                 if (!first) file << ",";
                 first = false;
                 file << "'" << row[0] << "'";
@@ -2070,15 +2096,55 @@ void generateHTMLReport() {
                     label: 'Daily Sales',
                     data: [)";
 
-            mysql_data_seek(res, 0); // Reset result pointer
+            mysql_data_seek(salesRes, 0); // Reset result pointer
             first = true;
-            while ((row = mysql_fetch_row(res))) {
+            while ((row = mysql_fetch_row(salesRes))) {
                 if (!first) file << ",";
                 first = false;
                 file << row[1];
             }
 
             file << R"(],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        var itemsChart = new Chart(itemsCtx, {
+            type: 'bar',
+            data: {
+                labels: [)";
+
+            first = true;
+            while ((row = mysql_fetch_row(itemsRes))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Items Sold',
+                    data: [)";
+
+            mysql_data_seek(itemsRes, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(itemsRes))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 1
                 }]
@@ -2101,7 +2167,8 @@ void generateHTMLReport() {
         else {
             cout << "Unable to open file for writing.\n";
         }
-        mysql_free_result(res);
+        mysql_free_result(salesRes);
+        mysql_free_result(itemsRes);
     }
     else {
         cout << "Error: " << mysql_error(conn) << endl;
@@ -2752,6 +2819,486 @@ void approveCustomerOrdersInterface() {
     cin.get();
 }
 
+void adminSalesReportInterface() {
+    while (true) {
+        clearScreen();
+        displayBanner();
+        cout << "=================== ADMIN SALES REPORT ===================\n";
+        cout << "| [1] Generate Sales Report                               |\n";
+        cout << "| [2] View Customer Demographics                          |\n";
+        cout << "| [3] View Product Popularity                             |\n";
+        cout << "| [4] View Items Sold Each Day                            |\n";
+        cout << "| [5] View Average Order Value Each Day                   |\n";
+        cout << "| [6] Back to Admin Menu                                  |\n";
+        cout << "===========================================================\n";
+        int choice;
+        cout << "Select an option: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1:
+            generateAdminSalesReport();
+            break;
+        case 2:
+            viewAdminCustomerDemographics();
+            break;
+        case 3:
+            viewAdminProductPopularity();
+            break;
+        case 4:
+            viewAdminItemsSoldEachDay();
+            break;
+        case 5:
+            viewAdminAverageOrderValueEachDay();
+            break;
+        case 6:
+            return; // Back to Admin Menu
+        default:
+            cout << "Invalid option. Please try again.\n";
+            break;
+        }
+        cin.ignore();
+        cin.get();
+    }
+}
+
+void generateAdminSalesReport() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== SALES REPORT ====================\n";
+
+    string query = "SELECT DATE(OrderDate) as OrderDate, SUM(TotalAmount) as DailySales "
+        "FROM orders "
+        "WHERE StatusID = 2 "
+        "GROUP BY DATE(OrderDate)";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        ofstream file("admin_sales_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sales Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Sales Report</h1>
+    <canvas id="salesChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('salesChart').getContext('2d');
+        var salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Daily Sales',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at admin_sales_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewAdminCustomerDemographics() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== CUSTOMER DEMOGRAPHICS ====================\n";
+
+    string query = "SELECT u.City, COUNT(o.OrderID) as OrderCount "
+        "FROM orders o "
+        "INNER JOIN user u ON o.UserID = u.UserID "
+        "WHERE o.StatusID = 2 "
+        "GROUP BY u.City";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        ofstream file("admin_customer_demographics_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Demographics Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Customer Demographics Report</h1>
+    <canvas id="demographicsChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('demographicsChart').getContext('2d');
+        var demographicsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Order Count',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at admin_customer_demographics_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewAdminProductPopularity() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== PRODUCT POPULARITY ====================\n";
+
+    string query = "SELECT p.ProductName, SUM(oi.Quantity) as TotalQuantity "
+        "FROM order_items oi "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "INNER JOIN orders o ON oi.OrderID = o.OrderID "
+        "WHERE o.StatusID = 2 "
+        "GROUP BY p.ProductName";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        ofstream file("admin_product_popularity_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Product Popularity Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Product Popularity Report</h1>
+    <canvas id="popularityChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('popularityChart').getContext('2d');
+        var popularityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Total Quantity Sold',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at admin_product_popularity_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewAdminItemsSoldEachDay() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== ITEMS SOLD EACH DAY ====================\n";
+
+    string query = "SELECT DATE(OrderDate) as OrderDate, SUM(oi.Quantity) as ItemsSold "
+        "FROM orders o "
+        "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+        "WHERE o.StatusID = 2 "
+        "GROUP BY DATE(OrderDate)";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        ofstream file("admin_items_sold_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Items Sold Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Items Sold Report</h1>
+    <canvas id="itemsChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('itemsChart').getContext('2d');
+        var itemsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Items Sold',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at admin_items_sold_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewAdminAverageOrderValueEachDay() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== AVERAGE ORDER VALUE EACH DAY ====================\n";
+
+    string query = "SELECT DATE(OrderDate) as OrderDate, AVG(TotalAmount) as AvgOrderValue "
+        "FROM orders "
+        "WHERE StatusID = 2 "
+        "GROUP BY DATE(OrderDate)";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        ofstream file("admin_avg_order_value_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Average Order Value Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Average Order Value Report</h1>
+    <canvas id="avgOrderValueChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('avgOrderValueChart').getContext('2d');
+        var avgOrderValueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Average Order Value',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at admin_avg_order_value_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
 void sellerSalesReportInterface() {
     while (true) {
         clearScreen();
@@ -2760,7 +3307,9 @@ void sellerSalesReportInterface() {
         cout << "| [1] Generate Sales Report                               |\n";
         cout << "| [2] View Customer Demographics                          |\n";
         cout << "| [3] View Product Popularity                             |\n";
-        cout << "| [4] Back to Seller Menu                                 |\n";
+        cout << "| [4] View Items Sold Each Day                            |\n";
+        cout << "| [5] View Average Order Value Each Day                   |\n";
+        cout << "| [6] Back to Seller Menu                                 |\n";
         cout << "===========================================================\n";
         int choice;
         cout << "Select an option: ";
@@ -2777,6 +3326,12 @@ void sellerSalesReportInterface() {
             viewProductPopularityInterface();
             break;
         case 4:
+            viewItemsSoldEachDayInterface();
+            break;
+        case 5:
+            viewAverageOrderValueEachDayInterface();
+            break;
+        case 6:
             return; // Back to Seller Menu
         default:
             cout << "Invalid option. Please try again.\n";
@@ -2790,23 +3345,79 @@ void sellerSalesReportInterface() {
 void generateSalesReportInterface() {
     clearScreen();
     displayBanner();
-    cout << "======================= GENERATE SALES REPORT =======================\n";
+    cout << "==================== SALES REPORT ====================\n";
 
-    // Correct SQL query
-    string query = "SELECT SUM(oi.UnitPrice * oi.Quantity) AS TotalSales, COUNT(DISTINCT o.OrderID) AS OrderCount "
-        "FROM orders o INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+    string query = "SELECT DATE(o.OrderDate) as OrderDate, SUM(o.TotalAmount) as DailySales "
+        "FROM orders o "
+        "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
         "INNER JOIN product p ON oi.ProductID = p.ProductID "
-        "WHERE p.SellerID = " + glbStr;
+        "WHERE o.StatusID = 2 AND p.SellerID = " + currentUserID + " "
+        "GROUP BY DATE(o.OrderDate)";
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
-        MYSQL_ROW row = mysql_fetch_row(res);
-        if (row) {
-            cout << "Total Sales: $" << fixedPrice(stod(row[0])) << endl;
-            cout << "Total Orders: " << row[1] << endl;
+        ofstream file("sales_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sales Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Sales Report</h1>
+    <canvas id="salesChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('salesChart').getContext('2d');
+        var salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Daily Sales',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at sales_report.html.\n";
         }
         else {
-            cout << "No sales data found for your account." << endl;
+            cout << "Unable to open file for writing.\n";
         }
         mysql_free_result(res);
     }
@@ -2814,8 +3425,7 @@ void generateSalesReportInterface() {
         cout << "Error: " << mysql_error(conn) << endl;
     }
 
-    cout << "====================================================================\n";
-    cout << "\nPress Enter to return to Seller Sales Report Menu...";
+    cout << "Press Enter to continue...";
     cin.ignore();
     cin.get();
 }
@@ -2823,23 +3433,81 @@ void generateSalesReportInterface() {
 void viewCustomerDemographicsInterface() {
     clearScreen();
     displayBanner();
-    cout << "================== VIEW CUSTOMER DEMOGRAPHICS ===================\n";
+    cout << "==================== CUSTOMER DEMOGRAPHICS ====================\n";
 
-    // Correct SQL query
-    string query = "SELECT u.City, COUNT(o.OrderID) AS OrderCount "
-        "FROM orders o INNER JOIN user u ON o.UserID = u.UserID "
+    string query = "SELECT u.City, COUNT(o.OrderID) as OrderCount "
+        "FROM orders o "
+        "INNER JOIN user u ON o.UserID = u.UserID "
         "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
         "INNER JOIN product p ON oi.ProductID = p.ProductID "
-        "WHERE p.SellerID = " + glbStr + " GROUP BY u.City";
+        "WHERE o.StatusID = 2 AND p.SellerID = " + currentUserID + " "
+        "GROUP BY u.City";
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
-        MYSQL_ROW row;
-        cout << left << setw(20) << "City" << setw(20) << "Order Count" << endl;
-        cout << string(40, '-') << endl;
+        ofstream file("customer_demographics_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Demographics Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Customer Demographics Report</h1>
+    <canvas id="demographicsChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('demographicsChart').getContext('2d');
+        var demographicsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [)";
 
-        while ((row = mysql_fetch_row(res))) {
-            cout << left << setw(20) << row[0] << setw(20) << row[1] << endl;
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Order Count',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at customer_demographics_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
         }
         mysql_free_result(res);
     }
@@ -2847,8 +3515,7 @@ void viewCustomerDemographicsInterface() {
         cout << "Error: " << mysql_error(conn) << endl;
     }
 
-    cout << "==================================================================\n";
-    cout << "\nPress Enter to return to Seller Sales Report Menu...";
+    cout << "Press Enter to continue...";
     cin.ignore();
     cin.get();
 }
@@ -2856,21 +3523,80 @@ void viewCustomerDemographicsInterface() {
 void viewProductPopularityInterface() {
     clearScreen();
     displayBanner();
-    cout << "================== VIEW PRODUCT POPULARITY ===================\n";
+    cout << "==================== PRODUCT POPULARITY ====================\n";
 
-    // Correct SQL query
-    string query = "SELECT p.ProductName, SUM(oi.Quantity) AS TotalQuantity "
-        "FROM order_items oi INNER JOIN product p ON oi.ProductID = p.ProductID "
-        "WHERE p.SellerID = " + glbStr + " GROUP BY p.ProductName";
+    string query = "SELECT p.ProductName, SUM(oi.Quantity) as TotalQuantity "
+        "FROM order_items oi "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "INNER JOIN orders o ON oi.OrderID = o.OrderID "
+        "WHERE o.StatusID = 2 AND p.SellerID = " + currentUserID + " "
+        "GROUP BY p.ProductName";
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
-        MYSQL_ROW row;
-        cout << left << setw(30) << "Product Name" << setw(20) << "Total Quantity" << endl;
-        cout << string(50, '-') << endl;
+        ofstream file("product_popularity_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Product Popularity Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Product Popularity Report</h1>
+    <canvas id="popularityChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('popularityChart').getContext('2d');
+        var popularityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [)";
 
-        while ((row = mysql_fetch_row(res))) {
-            cout << left << setw(30) << row[0] << setw(20) << row[1] << endl;
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Total Quantity Sold',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at product_popularity_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
         }
         mysql_free_result(res);
     }
@@ -2878,8 +3604,7 @@ void viewProductPopularityInterface() {
         cout << "Error: " << mysql_error(conn) << endl;
     }
 
-    cout << "==============================================================\n";
-    cout << "\nPress Enter to return to Seller Sales Report Menu...";
+    cout << "Press Enter to continue...";
     cin.ignore();
     cin.get();
 }
@@ -5168,6 +5893,183 @@ void sortProductsAdmin() {
 
     cout << "=============================================================\n";
     cout << "\nPress Enter to return to the Manage Products Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewItemsSoldEachDayInterface() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== ITEMS SOLD EACH DAY ====================\n";
+
+    string query = "SELECT DATE(o.OrderDate) as OrderDate, SUM(oi.Quantity) as ItemsSold "
+        "FROM orders o "
+        "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "WHERE o.StatusID = 2 AND p.SellerID = " + currentUserID + " "
+        "GROUP BY DATE(o.OrderDate)";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        ofstream file("items_sold_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Items Sold Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Items Sold Report</h1>
+    <canvas id="itemsChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('itemsChart').getContext('2d');
+        var itemsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Items Sold',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at items_sold_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewAverageOrderValueEachDayInterface() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== AVERAGE ORDER VALUE EACH DAY ====================\n";
+
+    string query = "SELECT DATE(o.OrderDate) as OrderDate, AVG(o.TotalAmount) as AvgOrderValue "
+        "FROM orders o "
+        "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "WHERE o.StatusID = 2 AND p.SellerID = " + currentUserID + " "
+        "GROUP BY DATE(o.OrderDate)";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        ofstream file("avg_order_value_report.html");
+        if (file.is_open()) {
+            file << R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Average Order Value Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Average Order Value Report</h1>
+    <canvas id="avgOrderValueChart" width="800" height="400"></canvas>
+    <script>
+        var ctx = document.getElementById('avgOrderValueChart').getContext('2d');
+        var avgOrderValueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [)";
+
+            MYSQL_ROW row;
+            bool first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << "'" << row[0] << "'";
+            }
+
+            file << R"(],
+                datasets: [{
+                    label: 'Average Order Value',
+                    data: [)";
+
+            mysql_data_seek(res, 0); // Reset result pointer
+            first = true;
+            while ((row = mysql_fetch_row(res))) {
+                if (!first) file << ",";
+                first = false;
+                file << row[1];
+            }
+
+            file << R"(],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)";
+            file.close();
+            cout << "HTML report generated successfully at avg_order_value_report.html.\n";
+        }
+        else {
+            cout << "Unable to open file for writing.\n";
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "Press Enter to continue...";
     cin.ignore();
     cin.get();
 }
