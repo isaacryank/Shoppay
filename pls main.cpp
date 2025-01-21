@@ -183,6 +183,7 @@ void editProfile();
 void listSellers();
 void myOrderInterface();
 void viewOrderHistoryInterface();
+void viewMyOrders();
 
 void startNewMessage();
 void selectMessage();
@@ -670,7 +671,7 @@ void customerMenu() {
             checkoutInterface();
             break;
         case 7:
-            myOrderInterface();
+            viewMyOrders();
             break;
         case 8:
             viewOrderHistoryInterface();
@@ -2585,25 +2586,59 @@ void manageChatsWithCustomersInterface() {
 }
 
 void approveCustomerOrdersInterface() {
-    while (true) {
-        clearScreen();
-        displayBanner();
-        cout << "================= APPROVE CUSTOMER ORDERS =================\n";
-        approveCustomerOrders();
-        cout << "===========================================================\n";
-        cout << "================= UPDATE ORDER STATUS =====================\n";
-        string orderID, statusID;
-        cout << "Enter Order ID: ";
-        cin >> orderID;
-        cout << "Enter New Status ID: ";
-        cin >> statusID;
-        updateOrderStatus(orderID, statusID);
-        cout << "==========================================================\n";
-        cout << "\nPress Enter to return to the Seller Menu...";
-        cin.ignore();
-        cin.get();
+    clearScreen();
+    displayBanner();
+    cout << "==================== APPROVE CUSTOMER ORDERS ====================\n";
+
+    string query = "SELECT o.OrderID, u.FullName, p.ProductName, p.StoreName, o.TotalAmount, o.OrderDate "
+        "FROM orders o "
+        "INNER JOIN user u ON o.UserID = u.UserID "
+        "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "WHERE o.StatusID = 1 AND p.SellerID = " + currentUserID; // Pending Seller Approval
+
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Order ID" << setw(20) << "Customer Name" << setw(30) << "Product Name" << setw(20) << "Store Name" << setw(20) << "Total Amount" << setw(20) << "Order Date" << endl;
+        cout << string(120, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            int orderID = stoi(row[0]);
+            string customerName = row[1];
+            string productName = row[2];
+            string storeName = row[3];
+            double totalAmount = stod(row[4]);
+            string orderDate = row[5];
+
+            cout << left << setw(10) << orderID << setw(20) << customerName << setw(30) << productName << setw(20) << storeName << setw(20) << fixed << setprecision(2) << totalAmount << setw(20) << orderDate << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    int orderID;
+    cout << "\nEnter Order ID to approve (or 0 to go back): ";
+    cin >> orderID;
+
+    if (orderID == 0) {
         return; // Back to Seller Menu
     }
+
+    string update_query = "UPDATE orders SET StatusID = 2 WHERE OrderID = " + to_string(orderID); // Set to Completed
+    if (executeUpdate(update_query)) {
+        cout << "Order approved successfully!\n";
+    }
+    else {
+        cerr << "Failed to approve order: " << mysql_error(conn) << endl;
+    }
+
+    cout << "\nPress Enter to return to the Seller Menu...";
+    cin.ignore();
+    cin.get();
 }
 
 void sellerSalesReportInterface() {
@@ -4701,6 +4736,72 @@ void processPayment(int orderId, double orderTotalAmount, double walletBalance, 
         }
     }
 
+    cout << "\nPress Enter to return to the Customer Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void viewMyOrders() {
+    clearScreen();
+    displayBanner();
+    cout << "==================== MY ORDERS ====================\n";
+
+    string query = "SELECT o.OrderID, p.StoreName, oi.ProductName, oi.Quantity, oi.UnitPrice, os.StatusName, o.OrderDate "
+        "FROM orders o "
+        "INNER JOIN order_items oi ON o.OrderID = oi.OrderID "
+        "INNER JOIN product p ON oi.ProductID = p.ProductID "
+        "INNER JOIN order_status os ON o.StatusID = os.StatusID "
+        "WHERE o.UserID = " + currentUserID + " AND (o.StatusID = 1 OR o.StatusID = 2 OR o.StatusID = 3) " // Include only relevant statuses 
+        "ORDER BY o.OrderDate DESC";
+
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Order ID" << setw(20) << "Store" << setw(30) << "Product Name" << setw(20) << "Total Amount" << setw(20) << "Status" << setw(20) << "Order Date" << endl;
+        cout << string(120, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            int orderID = stoi(row[0]);
+            string storeName = row[1];
+            string productName = row[2];
+            int quantity = stoi(row[3]);
+            double unitPrice = stod(row[4]);
+            double totalAmount = quantity * unitPrice;
+            string status = row[5];
+            string orderDate = row[6];
+
+            cout << left << setw(10) << orderID << setw(20) << storeName << setw(30) << productName << setw(20) << fixed << setprecision(2) << totalAmount << setw(20) << status << setw(20) << orderDate << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "==================== PENDING ORDERS ====================\n";
+    query = "SELECT OrderID, TotalAmount, OrderDate FROM orders WHERE UserID = " + currentUserID + " AND StatusID = 3"; // Pending Payment
+    res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Order ID" << setw(20) << "Total Amount" << setw(20) << "Status" << setw(20) << "Order Date" << endl;
+        cout << string(70, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            int orderID = stoi(row[0]);
+            double totalAmount = stod(row[1]);
+            string orderDate = row[2];
+
+            cout << left << setw(10) << orderID << setw(20) << fixed << setprecision(2) << totalAmount << setw(20) << "Pending Payment" << setw(20) << orderDate << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "========================================================\n";
     cout << "\nPress Enter to return to the Customer Menu...";
     cin.ignore();
     cin.get();
