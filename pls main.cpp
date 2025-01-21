@@ -104,7 +104,7 @@ void adminMenu();
 void sellerMenu();
 void customerMenu();
 void sellermanageProducts();
-//void adminmanageProducts();
+void adminmanageProducts();
 void approveSellers();
 void manageCoupons();
 void monitorWalletTransactions();
@@ -193,6 +193,8 @@ void sendMessage(int senderID, int receiverID, const std::string& messageText);
 void manageProfile();
 void updateProfile(const string& userID);
 void viewProfile(const string& userID);
+void sellersortProducts();
+void sellersearchProducts();
 
 void addProduct();
 void updateProduct();
@@ -200,6 +202,11 @@ void deleteProduct();
 void searchProducts();
 void sortProducts();
 void viewAllProducts();
+void searchProductsAdmin();
+void sortProductsAdmin();
+void viewAllProductsAdmin();
+void customerselectMessage();
+
 
 void createCoupon();
 void deleteCoupon();
@@ -532,7 +539,7 @@ void adminMenu() {
         cout << "[1] Products Details\n";
         cout << "[2] Approve Registered Sellers\n";
         cout << "[3] Coupon Management\n";
-        cout << "[4] Wallet Transactions Monitor\n";
+      //cout << "[4] Wallet Transactions Monitor\n";
         cout << "[5] Commission Rate\n";
         cout << "[6] Platform Sales Reports\n";
         cout << "[7] Graph Reports\n";
@@ -542,7 +549,7 @@ void adminMenu() {
 
         switch (choice) {
         case 1:
-            //adminmanageProducts();
+            adminmanageProducts();
             break;
         case 2:
             approveSellers();
@@ -586,10 +593,10 @@ void sellerMenu() {
         cout << "| [3] My Wallet                                     |\n";
         cout << "| [4] Manage Products                               |\n";
         cout << "| [5] Approve Customer Orders                       |\n";
-        cout << "| [6] Sales Reports                                 |\n";
-        cout << "| [7] Transaction History                           |\n";
-        cout << "| [8] Seller Sales Report                           |\n";
-        cout << "| [9] Logout                                        |\n";
+      //cout << "| [6] Sales Reports                                 |\n";
+      //cout << "| [7] Transaction History                           |\n";
+        cout << "| [6] Seller Sales Report                           |\n";
+        cout << "| [7] Logout                                        |\n";
         cout << "=====================================================\n";
         cout << "Select an option: ";
         cin >> choice;
@@ -610,16 +617,16 @@ void sellerMenu() {
         case 5:
             approveCustomerOrdersInterface();
             break;
-        case 6:
+        /*case 6:
             viewSalesReportsInterface();
             break;
         case 7:
             viewTransactionHistoryInterface();
-            break;
-        case 8:
+            break;*/
+        case 6:
             sellerSalesReportInterface();
             break;
-        case 9:
+        case 7:
             Logout(); // Return to main menu
             break;
         default:
@@ -643,10 +650,10 @@ void customerMenu() {
         cout << "| [3] Message Page (Message Sellers)                   |\n";
         cout << "| [4] Browse Products                                  |\n";
         cout << "| [5] My Cart                                          |\n";
-        cout << "| [6] Checkout                                         |\n";
-        cout << "| [7] My Order                                         |\n";
-        cout << "| [8] View Order History                               |\n";
-        cout << "| [9] Logout                                           |\n";
+      //cout << "| [6] Checkout                                         |\n";
+        cout << "| [6] My Order                                         |\n";
+        cout << "| [7] View Order History                               |\n";
+        cout << "| [8] Logout                                           |\n";
         cout << "=======================================================\n";
         cout << "Select an option: ";
         cin >> choice;
@@ -667,16 +674,16 @@ void customerMenu() {
         case 5:
             myCartInterface();
             break;
+        //case 6:
+            //checkoutInterface();
+            //break;
         case 6:
-            checkoutInterface();
-            break;
-        case 7:
             viewMyOrders();
             break;
-        case 8:
+        case 7:
             viewOrderHistoryInterface();
             break;
-        case 9:
+        case 8:
             Logout(); // Return to main menu
             break;
         default:
@@ -1485,7 +1492,9 @@ void browseProducts() {
 
         cout << "\n[1] Select Product by ID\n";
         cout << "[2] View By Store\n";
-        cout << "[3] Return Back\n";
+        cout << "[3] Sort Products\n";
+        cout << "[4] Search Products\n";
+        cout << "[5] Return Back\n";
         cout << "Select an option: ";
 
         int choice;
@@ -1503,7 +1512,15 @@ void browseProducts() {
             viewByStore();
             break;
         }
-        case 3:
+        case 3: {
+            sellersortProducts();
+            break;
+        }
+        case 4: {
+            sellersearchProducts();
+            break;
+        }
+        case 5:
             return; // Return to previous menu
         default:
             cout << "Invalid option. Please try again.\n";
@@ -1514,6 +1531,94 @@ void browseProducts() {
         cin.ignore();
         cin.get();
     }
+}
+
+void sellersortProducts() {
+    int choice;
+    string query;
+
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                       SORT PRODUCTS                        |\n";
+    cout << "=============================================================\n";
+    cout << "[1] Sort by Price\n";
+    cout << "[2] Sort by Name\n";
+    cout << "=============================================================\n";
+    cout << "Select an option: ";
+    cin >> choice;
+
+    if (choice == 1) {
+        query = "SELECT p.ProductID, p.ProductName, p.Price, p.StockQuantity, u.StoreName FROM product p "
+            "INNER JOIN user u ON p.SellerID = u.UserID ORDER BY p.Price";
+    }
+    else if (choice == 2) {
+        query = "SELECT p.ProductID, p.ProductName, p.Price, p.StockQuantity, u.StoreName FROM product p "
+            "INNER JOIN user u ON p.SellerID = u.UserID ORDER BY p.ProductName";
+    }
+    else {
+        cout << "Invalid option.\n";
+        return;
+    }
+
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Store Name" << setw(30) << "Product Name" << setw(10) << "Price" << setw(10) << "Stock" << endl;
+        cout << string(80, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[4] << setw(30) << row[1] << setw(10) << fixed << setprecision(2) << stod(row[2]) << setw(10) << row[3] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "\nPress Enter to return to the Browse Products Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void sellersearchProducts() {
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                     SEARCH PRODUCTS                        |\n";
+    cout << "=============================================================\n";
+
+    string keyword;
+
+    cout << "Enter product name keyword: ";
+    cin.ignore();
+    getline(cin, keyword);
+
+    string query = "SELECT p.ProductID, p.ProductName, p.Description, p.Price, p.StockQuantity, u.StoreName "
+        "FROM product p INNER JOIN user u ON p.SellerID = u.UserID "
+        "WHERE p.ProductName LIKE '%" + keyword + "%' ";
+
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Store Name" << setw(30) << "Product Name" << setw(10) << "Price" << setw(10) << "Stock" << endl;
+        cout << string(80, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[5] << setw(30) << row[1] << setw(10) << row[3] << setw(10) << row[4] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Browse Products Menu...";
+    cin.ignore();
+    cin.get();
 }
 
 void viewByStore() {
@@ -1890,6 +1995,7 @@ void viewReceipt(int orderID) {
     cout << "Press Enter to continue...";
     cin.ignore();
     cin.get();
+    customerMenu();
 }
 
 void exportSalesDataToCSV() {
@@ -1899,7 +2005,7 @@ void exportSalesDataToCSV() {
     if (res) {
         ofstream file("sales_data.csv");
         if (file.is_open()) {
-            file << "OrderID,UserID,TotalAmount,OrderStatus,OrderDate\n";
+            file << "OrderID,UserID,TotalAmount,OrderStatus,Or]derDate\n";
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(res))) {
                 file << row[0] << "," << row[1] << "," << fixedPrice(stod(row[2])) << "," << row[3] << "," << row[4] << "\n";
@@ -3295,6 +3401,65 @@ void startNewMessage() {
     cin.get();
 }
 
+void customerselectMessage() {
+    // Logic to select and view existing messages
+    clearScreen();
+    displayBanner();
+
+    // Query to get the list of customers
+    string query = "SELECT DISTINCT u.UserID, u.Username FROM messages m "
+        "INNER JOIN user u ON m.SenderID = u.UserID "
+        "WHERE m.ReceiverID = " + currentUserID + " "
+        "ORDER BY u.Username";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << "=============================================================\n";
+        cout << "|                       CUSTOMERS                            |\n";
+        cout << "=============================================================\n";
+
+        while ((row = mysql_fetch_row(res))) {
+            int customerID = stoi(row[0]);
+            string username = row[1] ? row[1] : "Unknown User";
+            cout << "- [" << username << "]  [ CustomerID = '" << customerID << "']\n";
+        }
+
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+        return;
+    }
+
+    cout << "=============================================================\n";
+    cout << "Enter Customer ID to view messages: ";
+    int customerID;
+    cin >> customerID;
+    cin.ignore(); // Clear the newline character from the input buffer
+
+    viewMessages(stoi(currentUserID), customerID); // Display chat history with the selected customer
+
+    cout << "\n=============================================================\n";
+    cout << "|                         REPLY                              |\n";
+    cout << "=============================================================\n";
+    string reply;
+    cout << "Enter your reply: ";
+    getline(cin, reply);
+
+    sendMessage(stoi(currentUserID), customerID, reply); // Send message from seller to customer
+    viewMessages(stoi(currentUserID), customerID); // View updated chat history with the customer
+
+    cout << "\n=============================================================\n";
+    cout << "Message sent successfully!\n";
+    cout << "=============================================================\n";
+
+    cout << "\nPress Enter to return to the Message Page...";
+    cin.ignore();
+    cin.get();
+}
+
+
 void selectMessage() {
     // Logic to select and view existing messages
     clearScreen();
@@ -4137,7 +4302,7 @@ void sellerMessagePageInterface() {
             int option;
             cin >> option;
             if (option == 1) {
-                selectMessage();
+                customerselectMessage();
             }
             else {
                 return;
@@ -4803,6 +4968,208 @@ void viewMyOrders() {
 
     cout << "========================================================\n";
     cout << "\nPress Enter to return to the Customer Menu...";
+    cin.ignore();
+    cin.get();
+}
+void adminmanageProducts() {
+    int choice;
+    while (true) {
+        clearScreen();
+        displayBanner();
+        cout << "=============================================================\n";
+        cout << "|                        MANAGE PRODUCTS                    |\n";
+        cout << "=============================================================\n";
+        cout << " [1] Add Product\n";
+        cout << " [2] Update Product\n";
+        cout << " [3] Delete Product\n";
+        cout << " [4] View All Products\n";
+        cout << " [5] Search Products\n";
+        cout << " [6] Sort Products\n";
+        cout << " [7] Back to Admin Menu\n";
+        cout << "=============================================================\n";
+        cout << " Select an option: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1:
+            addProduct();
+            break;
+        case 2:
+            updateProduct();
+            break;
+        case 3:
+            deleteProduct();
+            break;
+        case 4:
+            viewAllProductsAdmin();
+            break;
+        case 5:
+
+            searchProductsAdmin();
+            sortProductsAdmin();
+            viewAllProductsAdmin();
+            break;
+        case 6:
+            sortProductsAdmin();
+            break;
+        case 7:
+            return; // Return to admin menu
+        default:
+            cout << "Invalid option. Please try again.\n";
+            break;
+        }
+        cin.ignore();
+        cin.get();
+    }
+}
+
+void viewAllProductsAdmin() {
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                      ALL PRODUCTS                          |\n";
+    cout << "=============================================================\n";
+
+    string query = "SELECT * FROM product";
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
+            << setw(10) << "Price" << setw(10) << "Stock" << setw(20) << "SellerID" << endl;
+        cout << string(120, '=') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
+                << setw(10) << row[3] << setw(10) << row[4] << setw(20) << row[5] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Manage Products Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void searchProductsAdmin() {
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                     SEARCH PRODUCTS                        |\n";
+    cout << "=============================================================\n";
+
+    string keyword, category, minPrice, maxPrice, minRating;
+
+    cout << "Enter keyword: ";
+    cin.ignore();
+    getline(cin, keyword);
+
+    cout << "Enter category (or leave blank): ";
+    getline(cin, category);
+
+    cout << "Enter minimum price (or leave blank): ";
+    getline(cin, minPrice);
+
+    cout << "Enter maximum price (or leave blank): ";
+    getline(cin, maxPrice);
+
+    cout << "Enter minimum rating (or leave blank): ";
+    getline(cin, minRating);
+
+    string query = "SELECT p.ProductID, p.ProductName, p.Description, p.Price, p.StockQuantity, AVG(r.Rating) as AvgRating "
+        "FROM product p LEFT JOIN reviews r ON p.ProductID = r.ProductID "
+        "WHERE p.ProductName LIKE '%" + keyword + "%' ";
+
+    if (!category.empty()) {
+        query += "AND p.CategoryID = (SELECT CategoryID FROM category WHERE CategoryName = '" + category + "') ";
+    }
+    if (!minPrice.empty()) {
+        query += "AND p.Price >= " + minPrice + " ";
+    }
+    if (!maxPrice.empty()) {
+        query += "AND p.Price <= " + maxPrice + " ";
+    }
+    if (!minRating.empty()) {
+        query += "GROUP BY p.ProductID HAVING AvgRating >= " + minRating;
+    }
+    else {
+        query += "GROUP BY p.ProductID";
+    }
+
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
+            << setw(10) << "Price" << setw(10) << "Stock" << setw(10) << "AvgRating" << endl;
+        cout << string(110, '=') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
+                << setw(10) << row[3] << setw(10) << row[4] << setw(10) << row[5] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Manage Products Menu...";
+    cin.ignore();
+    cin.get();
+}
+
+void sortProductsAdmin() {
+    int choice;
+    string query;
+
+    clearScreen();
+    displayBanner();
+    cout << "=============================================================\n";
+    cout << "|                       SORT PRODUCTS                        |\n";
+    cout << "=============================================================\n";
+    cout << "[1] Sort by Price\n";
+    cout << "[2] Sort by Name\n";
+    cout << "=============================================================\n";
+    cout << "Select an option: ";
+    cin >> choice;
+
+    if (choice == 1) {
+        query = "SELECT * FROM product ORDER BY Price";
+    }
+    else if (choice == 2) {
+        query = "SELECT * FROM product ORDER BY ProductName";
+    }
+    else {
+        cout << "Invalid option.\n";
+        return;
+    }
+
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
+            << setw(10) << "Price" << setw(10) << "Stock" << setw(20) << "SellerID" << endl;
+        cout << string(120, '=') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
+                << setw(10) << row[3] << setw(10) << row[4] << setw(20) << row[5] << endl;
+        }
+        mysql_free_result(res);
+    }
+    else {
+        cout << "Error: " << mysql_error(conn) << endl;
+    }
+
+    cout << "=============================================================\n";
+    cout << "\nPress Enter to return to the Manage Products Menu...";
     cin.ignore();
     cin.get();
 }
