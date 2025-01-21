@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 21, 2025 at 06:29 AM
+-- Generation Time: Jan 21, 2025 at 10:32 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -51,6 +51,13 @@ CREATE TABLE `coupon` (
   `UsageLimit` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `coupon`
+--
+
+INSERT INTO `coupon` (`CouponID`, `Code`, `DiscountPercentage`, `ValidFrom`, `ValidUntil`, `MinPurchase`, `UsageLimit`) VALUES
+(1, 'DISCOUNT10', 10, '2025-02-23', '2025-03-23', 10, 2);
+
 -- --------------------------------------------------------
 
 --
@@ -65,6 +72,14 @@ CREATE TABLE `messages` (
   `Timestamp` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `messages`
+--
+
+INSERT INTO `messages` (`MessageID`, `SenderID`, `ReceiverID`, `MessageText`, `Timestamp`) VALUES
+(1, 6, 3, 'Hi, I need Help', '2025-01-21 16:03:25'),
+(2, 6, 3, 'Still have ?', '2025-01-21 16:23:11');
+
 -- --------------------------------------------------------
 
 --
@@ -78,6 +93,23 @@ CREATE TABLE `orders` (
   `StatusID` int(11) DEFAULT NULL,
   `OrderDate` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`OrderID`, `UserID`, `TotalAmount`, `StatusID`, `OrderDate`) VALUES
+(41, 6, 15, 2, '2025-01-21 19:13:46'),
+(42, 6, 48, 2, '2025-01-21 19:27:14'),
+(43, 6, 24, 1, '2025-01-21 19:40:22'),
+(44, 6, 86, 1, '2025-01-21 19:53:39'),
+(45, 6, 21, 2, '2025-01-21 20:07:44'),
+(46, 6, 50, 2, '2025-01-21 20:18:40'),
+(47, 6, 24, 2, '2025-01-21 20:33:07'),
+(48, 6, 15, 2, '2025-01-21 20:35:43'),
+(49, 6, 68, 2, '2025-01-21 20:37:31'),
+(50, 6, 15, 2, '2025-01-21 20:43:39'),
+(51, 6, 260, 1, '2025-01-21 20:58:45');
 
 -- --------------------------------------------------------
 
@@ -94,6 +126,32 @@ CREATE TABLE `order_items` (
   `ProductName` varchar(100) DEFAULT NULL,
   `StoreName` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`OrderItemID`, `OrderID`, `ProductID`, `Quantity`, `UnitPrice`, `ProductName`, `StoreName`) VALUES
+(44, 41, 1, 2, 25, 'EARBUDS', 'UGREEN'),
+(45, 41, 7, 5, 3, 'CLAY POT', 'DIY'),
+(46, 42, 3, 1, 50, 'KEYBOARD', 'UGREEN'),
+(47, 42, 8, 2, 24, 'LADDER 7FT', 'DIY'),
+(48, 43, 10, 2, 12, 'MINI FAN', 'GOJODOQ'),
+(49, 44, 12, 10, 4, 'APT KEYCHAIN', 'UGREEN'),
+(50, 44, 5, 1, 13, 'STYLUS PEN', 'UGREEN'),
+(51, 44, 7, 3, 3, 'CLAY POT', 'DIY'),
+(52, 44, 10, 2, 12, 'MINI FAN', 'GOJODOQ'),
+(53, 45, 3, 1, 50, 'KEYBOARD', 'UGREEN'),
+(54, 45, 7, 7, 3, 'CLAY POT', 'DIY'),
+(55, 46, 1, 2, 25, 'EARBUDS', 'UGREEN'),
+(56, 47, 10, 2, 12, 'MINI FAN', 'GOJODOQ'),
+(57, 48, 1, 1, 25, 'EARBUDS', 'UGREEN'),
+(58, 48, 7, 5, 3, 'CLAY POT', 'DIY'),
+(59, 49, 9, 2, 34, 'PORTABLE HANDHELD', 'GOJODOQ'),
+(60, 50, 7, 5, 3, 'CLAY POT', 'DIY'),
+(61, 50, 10, 2, 12, 'MINI FAN', 'GOJODOQ'),
+(62, 51, 1, 2, 25, 'EARBUDS', 'UGREEN'),
+(63, 51, 6, 3, 70, 'GRILL X42', 'DIY');
 
 -- --------------------------------------------------------
 
@@ -137,15 +195,16 @@ CREATE TABLE `product` (
 --
 
 INSERT INTO `product` (`ProductID`, `SellerID`, `ProductName`, `Description`, `Price`, `StockQuantity`, `StoreName`) VALUES
-(1, 3, 'EARBUDS', 'MODEL TYS 110', 25, 32, NULL),
-(3, 3, 'KEYBOARD', 'GREEN SWITCH', 50, 65, NULL),
-(5, 3, 'STYLUS PEN', 'COMPATIBLE WITH ALL DEVICE. BLUETOOTH 5.0v.', 13, 84, NULL),
-(6, 4, 'GRILL X42', 'COMPLETE SET WITH ADDITIONAL TOOLS', 70, 45, NULL),
-(7, 4, 'CLAY POT', 'BRING NATURE TO YOUR HOUSE', 3, 209, NULL),
-(8, 4, 'LADDER 7FT', 'NEW DESIGN WITH GREATER STRENGTH', 24, 85, NULL),
-(9, 7, 'PORTABLE HANDHELD', 'TURBO FAN 100 WIND', 34, 130, NULL),
-(10, 7, 'MINI FAN', '3000mAH USB CLIP FAN ROTATING', 12, 53, NULL),
-(11, 7, 'MINI POWERBANK', '10000mAH HOT PORTABLE WIRESLESS', 89, 5, NULL);
+(1, 3, 'EARBUDS', 'MODEL TYS 110', 25, 3, 'UGREEN'),
+(3, 3, 'KEYBOARD', 'GREEN SWITCH', 50, 50, 'UGREEN'),
+(5, 3, 'STYLUS PEN', 'COMPATIBLE WITH ALL DEVICE. BLUETOOTH 5.0v.', 13, 51, 'UGREEN'),
+(6, 4, 'GRILL X42', 'COMPLETE SET WITH ADDITIONAL TOOLS', 70, 30, 'DIY'),
+(7, 4, 'CLAY POT', 'BRING NATURE TO YOUR HOUSE', 3, 75, 'DIY'),
+(8, 4, 'LADDER 7FT', 'NEW DESIGN WITH GREATER STRENGTH', 24, 78, 'DIY'),
+(9, 7, 'PORTABLE HANDHELD', 'TURBO FAN 100 WIND', 34, 82, 'GOJODOQ'),
+(10, 7, 'MINI FAN', '3000mAH USB CLIP FAN ROTATING', 12, 5, 'GOJODOQ'),
+(11, 7, 'MINI POWERBANK', '10000mAH HOT PORTABLE WIRESLESS', 89, 4, 'GOJODOQ'),
+(12, 3, 'APT KEYCHAIN', 'AT', 4, 190, 'UGREEN');
 
 -- --------------------------------------------------------
 
@@ -211,7 +270,9 @@ INSERT INTO `user` (`UserID`, `Username`, `Email`, `Password`, `FullName`, `Addr
 (4, 'Seller2', 'seller2', 'hashed_123', 'Tan Cheng', 'UTeM', '013 445 3232', 1, 1, 'DIY', '2025-01-19 03:19:42'),
 (5, 'Veron', 'veron@gmail.com', 'hashed_123', 'Veron Jr', '', '012 332 2345', 0, 0, '', '2025-01-19 04:31:41'),
 (6, 'Isaac', 'isaac', 'hashed_123', 'Isaac Ryan', 'Taman Tambun, Melaka', '014 225 3485', 0, 0, '', '2025-01-19 04:32:24'),
-(7, 'Seller3', 'seller3@gmail.com', 'hashed_123', 'Anis Hazuki', '', '012 323 4343', 1, 1, 'GOJODOQ', '2025-01-19 07:23:27');
+(7, 'Seller3', 'seller3@gmail.com', 'hashed_123', 'Anis Hazuki', '', '012 323 4343', 1, 1, 'GOJODOQ', '2025-01-19 07:23:27'),
+(8, 'Seller4', 'seller@gmail.com', 'hashed_', 'Seller4', '', '123 ', 1, 0, 'ECO SHOP', '2025-01-21 15:47:48'),
+(10, 'Seller5', 'sellr@gmail.com', 'hashed_123', 'Seller5', '', '122', 1, 0, '', '2025-01-21 15:49:58');
 
 -- --------------------------------------------------------
 
@@ -230,10 +291,10 @@ CREATE TABLE `wallet` (
 --
 
 INSERT INTO `wallet` (`WalletID`, `UserID`, `Balance`) VALUES
-(1, 6, 36),
-(2, 3, 100),
-(3, 4, 120),
-(4, 7, 40);
+(1, 6, 6434),
+(2, 3, 2162),
+(3, 4, 1702),
+(4, 7, 138);
 
 --
 -- Indexes for dumped tables
@@ -327,31 +388,31 @@ ALTER TABLE `wallet`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `CartID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `CartID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT for table `coupon`
 --
 ALTER TABLE `coupon`
-  MODIFY `CouponID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `CouponID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `MessageID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `MessageID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `OrderID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `OrderID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `OrderItemID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `OrderItemID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT for table `order_status`
@@ -363,7 +424,7 @@ ALTER TABLE `order_status`
 -- AUTO_INCREMENT for table `product`
 --
 ALTER TABLE `product`
-  MODIFY `ProductID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `ProductID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `system_settings`
@@ -381,7 +442,7 @@ ALTER TABLE `transaction`
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `wallet`
