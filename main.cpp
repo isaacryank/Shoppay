@@ -3693,6 +3693,99 @@ void paymentTransaction(int orderId, double orderTotalAmount, double walletBalan
     cin.get();
 }
 
+void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTotalAmount) {
+    clearScreen();
+    displayBanner();
+    cout << "==================== CHECKOUT ====================\n";
+
+    // Fetch details of selected items from the cart
+    string query = "SELECT c.ProductID, p.ProductName, u.StoreName, c.Quantity, p.Price AS UnitPrice "
+        "FROM cart c INNER JOIN product p ON c.ProductID = p.ProductID "
+        "INNER JOIN user u ON p.SellerID = u.UserID "
+        "WHERE c.UserID = " + currentUserID + " AND c.ProductID IN (";
+    for (size_t i = 0; i < selectedItems.size(); ++i) {
+        query += to_string(selectedItems[i]);
+        if (i < selectedItems.size() - 1) {
+            query += ", ";
+        }
+    }
+    query += ")";
+
+    MYSQL_RES* res = executeSelectQuery(query);
+
+    if (res && mysql_num_rows(res) > 0) {
+        MYSQL_ROW row;
+        cout << left << setw(10) << "Product ID" << setw(30) << "Product Name" << setw(20) << "Store Name" << setw(10) << "Quantity" << setw(10) << "Unit Price" << setw(10) << "Total" << endl;
+        cout << string(90, '-') << endl;
+
+        while ((row = mysql_fetch_row(res))) {
+            if (row == nullptr) {
+                cerr << "Error: Null row fetched from database.\n";
+                continue;
+            }
+
+            int productID = stoi(row[0]);
+            string productName = row[1];
+            string storeName = row[2];
+            int quantity = stoi(row[3]);
+            double unitPrice = stod(row[4]);
+            double total = unitPrice * quantity;
+
+            // Print each selected item
+            cout << left << setw(10) << productID << setw(30) << productName << setw(20) << storeName << setw(10) << quantity << setw(10) << fixed << setprecision(2) << unitPrice << setw(10) << fixed << setprecision(2) << total << endl;
+        }
+        mysql_free_result(res);
+
+        cout << string(90, '=') << endl;
+        cout << "Total Amount: $" << fixed << setprecision(2) << selectedTotalAmount << endl;
+
+        // Fetch wallet balance
+        string balanceQuery = "SELECT Balance FROM wallet WHERE UserID = " + currentUserID;
+        MYSQL_RES* balanceRes = executeSelectQuery(balanceQuery);
+        double walletBalance = 0.0;
+        if (balanceRes) {
+            MYSQL_ROW balanceRow = mysql_fetch_row(balanceRes);
+            if (balanceRow) {
+                walletBalance = stod(balanceRow[0]);
+            }
+            mysql_free_result(balanceRes);
+        }
+        else {
+            cerr << "Error: " << mysql_error(conn) << endl;
+        }
+        cout << "Current Wallet Balance: $" << fixed << setprecision(2) << walletBalance << endl;
+
+        cout << "\n[1] Proceed with Payment\n";
+        cout << "[2] Cancel\n";
+        cout << "Select an option: ";
+        int option;
+        cin >> option;
+
+        if (option == 1) {
+            // Generate a new order and proceed to payment
+            int orderId = generateOrder(selectedItems, selectedTotalAmount);
+            if (orderId > 0) {
+                paymentTransaction(orderId, selectedTotalAmount, walletBalance);
+            }
+        }
+        else {
+            cout << "Checkout cancelled." << endl;
+        }
+    }
+    else {
+        if (res == nullptr) {
+            cerr << "Error: " << mysql_error(conn) << endl;
+        }
+        else if (mysql_num_rows(res) == 0) {
+            cerr << "Error: No rows fetched from database.\n";
+        }
+    }
+
+    cout << "\nPress Enter to return to the Customer Menu...";
+    cin.ignore();
+    cin.get();
+}
+
 void generateReceipt(int receiptId, int orderId, const string& orderDate, const string& customerName, const string& customerEmail, const string& customerAddress, const string& customerPhone, const string& couponCode, double originalAmount, double discountAmount, double subtotal, double grandTotal) {
     const int width = 65; // Width of console output
     stringstream receipt; // Use stringstream to collect the receipt content
@@ -4066,99 +4159,6 @@ void selectItemsForCheckout() {
     }
 
     cout << "\nPress Enter to return to the My Cart Menu...";
-    cin.ignore();
-    cin.get();
-}
-
-void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTotalAmount) {
-    clearScreen();
-    displayBanner();
-    cout << "==================== CHECKOUT ====================\n";
-
-    // Fetch details of selected items from the cart
-    string query = "SELECT c.ProductID, p.ProductName, u.StoreName, c.Quantity, p.Price AS UnitPrice "
-        "FROM cart c INNER JOIN product p ON c.ProductID = p.ProductID "
-        "INNER JOIN user u ON p.SellerID = u.UserID "
-        "WHERE c.UserID = " + currentUserID + " AND c.ProductID IN (";
-    for (size_t i = 0; i < selectedItems.size(); ++i) {
-        query += to_string(selectedItems[i]);
-        if (i < selectedItems.size() - 1) {
-            query += ", ";
-        }
-    }
-    query += ")";
-
-    MYSQL_RES* res = executeSelectQuery(query);
-
-    if (res && mysql_num_rows(res) > 0) {
-        MYSQL_ROW row;
-        cout << left << setw(10) << "Product ID" << setw(30) << "Product Name" << setw(20) << "Store Name" << setw(10) << "Quantity" << setw(10) << "Unit Price" << setw(10) << "Total" << endl;
-        cout << string(90, '-') << endl;
-
-        while ((row = mysql_fetch_row(res))) {
-            if (row == nullptr) {
-                cerr << "Error: Null row fetched from database.\n";
-                continue;
-            }
-
-            int productID = stoi(row[0]);
-            string productName = row[1];
-            string storeName = row[2];
-            int quantity = stoi(row[3]);
-            double unitPrice = stod(row[4]);
-            double total = unitPrice * quantity;
-
-            // Print each selected item
-            cout << left << setw(10) << productID << setw(30) << productName << setw(20) << storeName << setw(10) << quantity << setw(10) << fixed << setprecision(2) << unitPrice << setw(10) << fixed << setprecision(2) << total << endl;
-        }
-        mysql_free_result(res);
-
-        cout << string(90, '=') << endl;
-        cout << "Total Amount: $" << fixed << setprecision(2) << selectedTotalAmount << endl;
-
-        // Fetch wallet balance
-        string balanceQuery = "SELECT Balance FROM wallet WHERE UserID = " + currentUserID;
-        MYSQL_RES* balanceRes = executeSelectQuery(balanceQuery);
-        double walletBalance = 0.0;
-        if (balanceRes) {
-            MYSQL_ROW balanceRow = mysql_fetch_row(balanceRes);
-            if (balanceRow) {
-                walletBalance = stod(balanceRow[0]);
-            }
-            mysql_free_result(balanceRes);
-        }
-        else {
-            cerr << "Error: " << mysql_error(conn) << endl;
-        }
-        cout << "Current Wallet Balance: $" << fixed << setprecision(2) << walletBalance << endl;
-
-        cout << "\n[1] Proceed with Payment\n";
-        cout << "[2] Cancel\n";
-        cout << "Select an option: ";
-        int option;
-        cin >> option;
-
-        if (option == 1) {
-            // Generate a new order and proceed to payment
-            int orderId = generateOrder(selectedItems, selectedTotalAmount);
-            if (orderId > 0) {
-                paymentTransaction(orderId, selectedTotalAmount, walletBalance);
-            }
-        }
-        else {
-            cout << "Checkout cancelled." << endl;
-        }
-    }
-    else {
-        if (res == nullptr) {
-            cerr << "Error: " << mysql_error(conn) << endl;
-        }
-        else if (mysql_num_rows(res) == 0) {
-            cerr << "Error: No rows fetched from database.\n";
-        }
-    }
-
-    cout << "\nPress Enter to return to the Customer Menu...";
     cin.ignore();
     cin.get();
 }
