@@ -3685,7 +3685,7 @@ void checkoutSelectedItems(const vector<int>& selectedItems, double selectedTota
             int orderId = generateOrder(selectedItems, selectedTotalAmount);
             if (orderId > 0) {
                 processPayment(orderId, selectedTotalAmount, walletBalance);
-                
+
             }
         }
         else {
