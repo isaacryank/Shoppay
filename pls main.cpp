@@ -702,8 +702,7 @@ void sellermanageProducts() {
         cout << " [4] View All Products\n";
         cout << " [5] Search Products\n";
         cout << " [6] Sort Products\n";
-        cout << " [7] Browse Products (Monitor Other Sellers)\n";
-        cout << " [8] Back to Seller Menu\n";
+        cout << " [7] Back to Seller Menu\n";
         cout << "=============================================================\n";
         cout << " Select an option: ";
         cin >> choice;
@@ -728,8 +727,6 @@ void sellermanageProducts() {
             sortProducts();
             break;
         case 7:
-            browseProductsInterface();
-        case 8:
             sellerMenu(); // Return to main menu;
         default:
             cout << "Invalid option. Please try again.\n";
@@ -752,7 +749,7 @@ void addProduct() {
     cout << "|                      EXISTING PRODUCTS                    |\n";
     cout << "=============================================================\n";
 
-    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
+    string query = "SELECT ProductID, ProductName, Description, Price, StockQuantity FROM product WHERE SellerID = " + glbStr;
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
@@ -799,21 +796,15 @@ void addProduct() {
     queryStore = "SELECT StoreName FROM user WHERE UserID = " + glbStr;
     res = executeSelectQuery(queryStore);
 
-    if (res)
-    {
+    if (res) {
         MYSQL_ROW row;
-
-        while (row = mysql_fetch_row(res))
-        {
+        while ((row = mysql_fetch_row(res))) {
             getstoreName = row[0];
             cout << "StoreName: " << getstoreName << endl;
         }
-
         mysql_free_result(res);
-
     }
-    else
-    {
+    else {
         cout << "queryStore: Error: " << mysql_error(conn) << endl;
     }
 
@@ -844,7 +835,7 @@ void updateProduct() {
     cout << "|                      EXISTING PRODUCTS                    |\n";
     cout << "=============================================================\n";
 
-    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
+    string query = "SELECT ProductID, ProductName, Description, Price, StockQuantity FROM product WHERE SellerID = " + glbStr;
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
@@ -886,7 +877,7 @@ void updateProduct() {
         cout << "|                  SELECTED PRODUCT DETAILS                 |\n";
         cout << "=============================================================\n";
 
-        query = "SELECT * FROM product WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
+        query = "SELECT ProductID, ProductName, Description, Price, StockQuantity FROM product WHERE ProductID = " + to_string(productId) + " AND SellerID = " + glbStr;
         res = executeSelectQuery(query);
 
         if (res) {
@@ -897,7 +888,6 @@ void updateProduct() {
                 cout << string(100, '=') << endl;
                 cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
                     << setw(10) << row[3] << setw(10) << row[4] << endl;
-
             }
             else {
                 cout << "Product not found or you do not have permission to edit this product.\n";
@@ -982,7 +972,7 @@ void deleteProduct() {
     cout << "|                      EXISTING PRODUCTS                    |\n";
     cout << "=============================================================\n";
 
-    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
+    string query = "SELECT ProductID, ProductName, Description, Price, StockQuantity FROM product WHERE SellerID = " + glbStr;
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
@@ -1028,7 +1018,7 @@ void viewAllProducts() {
     cout << "|                      ALL PRODUCTS                          |\n";
     cout << "=============================================================\n";
 
-    string query = "SELECT * FROM product WHERE SellerID = " + glbStr;
+    string query = "SELECT ProductID, ProductName, Description, Price, StockQuantity FROM product WHERE SellerID = " + glbStr;
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
@@ -1060,55 +1050,27 @@ void searchProducts() {
     cout << "|                     SEARCH PRODUCTS                        |\n";
     cout << "=============================================================\n";
 
-    string keyword, category, minPrice, maxPrice, minRating;
+    string keyword;
 
     cout << "Enter keyword: ";
     cin.ignore();
     getline(cin, keyword);
 
-    cout << "Enter category (or leave blank): ";
-    getline(cin, category);
-
-    cout << "Enter minimum price (or leave blank): ";
-    getline(cin, minPrice);
-
-    cout << "Enter maximum price (or leave blank): ";
-    getline(cin, maxPrice);
-
-    cout << "Enter minimum rating (or leave blank): ";
-    getline(cin, minRating);
-
-    string query = "SELECT p.ProductID, p.ProductName, p.Description, p.Price, p.StockQuantity, AVG(r.Rating) as AvgRating "
-        "FROM product p LEFT JOIN reviews r ON p.ProductID = r.ProductID "
-        "WHERE p.SellerID = " + glbStr + " AND p.ProductName LIKE '%" + keyword + "%' ";
-
-    if (!category.empty()) {
-        query += "AND p.CategoryID = (SELECT CategoryID FROM category WHERE CategoryName = '" + category + "') ";
-    }
-    if (!minPrice.empty()) {
-        query += "AND p.Price >= " + minPrice + " ";
-    }
-    if (!maxPrice.empty()) {
-        query += "AND p.Price <= " + maxPrice + " ";
-    }
-    if (!minRating.empty()) {
-        query += "GROUP BY p.ProductID HAVING AvgRating >= " + minRating;
-    }
-    else {
-        query += "GROUP BY p.ProductID";
-    }
+    string query = "SELECT ProductID, ProductName, Description, Price, StockQuantity "
+        "FROM product "
+        "WHERE SellerID = " + glbStr + " AND ProductName LIKE '%" + keyword + "%'";
 
     MYSQL_RES* res = executeSelectQuery(query);
 
     if (res) {
         MYSQL_ROW row;
         cout << left << setw(10) << "ProductID" << setw(20) << "Name" << setw(50) << "Description"
-            << setw(10) << "Price" << setw(10) << "Stock" << setw(10) << "AvgRating" << endl;
-        cout << string(110, '=') << endl;
+            << setw(10) << "Price" << setw(10) << "Stock" << endl;
+        cout << string(100, '=') << endl;
 
         while ((row = mysql_fetch_row(res))) {
             cout << left << setw(10) << row[0] << setw(20) << row[1] << setw(50) << row[2]
-                << setw(10) << row[3] << setw(10) << row[4] << setw(10) << row[5] << endl;
+                << setw(10) << row[3] << setw(10) << row[4] << endl;
         }
         mysql_free_result(res);
     }
@@ -1138,10 +1100,10 @@ void sortProducts() {
     cin >> choice;
 
     if (choice == 1) {
-        query = "SELECT * FROM product WHERE SellerID = " + glbStr + " ORDER BY Price";
+        query = "SELECT ProductID, ProductName, Description, Price, StockQuantity FROM product WHERE SellerID = " + glbStr + " ORDER BY Price";
     }
     else if (choice == 2) {
-        query = "SELECT * FROM product WHERE SellerID = " + glbStr + " ORDER BY ProductName";
+        query = "SELECT ProductID, ProductName, Description, Price, StockQuantity FROM product WHERE SellerID = " + glbStr + " ORDER BY ProductName";
     }
     else {
         cout << "Invalid option.\n";
@@ -1226,6 +1188,7 @@ void approveSellers() {
     cin.ignore();
     cin.get();
 }
+
 void manageCoupons() {
     int choice;
     while (true) {
